@@ -1,0 +1,12 @@
+Dados/*.nc
+Dados/*.gz
+Dados/*.zip
+figuras/*.png
+tabelas/*.csv
+resultados/
+.quarto/
+*_files/
+relatorio.html
+.Rhistory
+.RData
+testes/ultimo_diretorio.txt

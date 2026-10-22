@@ -1,0 +1,380 @@
+---
+title: "Análise de Valores Extremos do Fluxo de Raios X Solar observado pelo GOES-16"
+subtitle: "Máximos por blocos, distribuição GEV e limites da extrapolação"
+lang: pt-BR
+date: last-modified
+format:
+  html:
+    theme: [cosmo, tema.scss]
+    css: estilos.css
+    embed-resources: true
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    html-math-method: mathml
+    code-fold: true
+    code-summary: "Mostrar código"
+    fig-cap-location: bottom
+    tbl-cap-location: top
+    link-external-newwindow: true
+execute:
+  echo: false
+  warning: true
+  message: false
+  cache: false
+fig-align: center
+fig-width: 9
+fig-height: 4.6
+---
+
+```{r}
+#| label: preparacao
+withCallingHandlers(source('R/executar.R'),
+  message=function(m) invokeRestart('muffleMessage'))
+mostrar <- function(x, legenda=NULL, digitos=4) {
+  z <- as.data.frame(x)
+  for(nm in names(z)) if(is.numeric(z[[nm]])) {
+    v<-z[[nm]]
+    z[[nm]]<-ifelse(is.na(v),'—',ifelse(v!=0 & (abs(v)<.001 | abs(v)>=1e5),
+      formatC(v,format='e',digits=3),formatC(v,format='fg',digits=digitos)))
+  }
+  names(z)<-gsub('_',' ',names(z),fixed=TRUE)
+  knitr::kable(z,caption=legenda,align='l')
+}
+imagens <- function(nomes) knitr::include_graphics(file.path('figuras',paste0(nomes,'.png')))
+f <- modelos$modelos[[modelos$principal]]
+xi <- modelos$parametros[parametro=='xi',estimativa]
+icxi <- retornos$bootstrap[parametro=='xi']
+principal <- modelos$principal
+anual <- merge(exploratoria$anual,retornos$eventos_ano,by='ano',all.x=TRUE)
+anual[is.na(eventos),eventos:=0L]
+```
+
+# Introdução
+
+Explosões solares podem produzir aumentos abruptos no fluxo de raios X observado por satélites. Descrever a intensidade desses picos é relevante para o estudo da atividade solar e de sua variabilidade. Uma descrição baseada somente em média e variância pode ocultar a distância entre o fluxo habitual e os episódios mais intensos.
+
+Este trabalho aplica a Teoria de Valores Extremos (TVE) ao canal XRS-B do GOES-16. O objetivo é comparar máximos diários, semanais e mensais, ajustar a distribuição Generalizada de Valores Extremos (GEV), examinar sua adequação e estimar níveis de retorno com incerteza explícita. Não se procura prever a data de uma próxima explosão, demonstrar mecanismos físicos ou inferir efeitos sobre tecnologias terrestres sem dados adicionais.
+
+O trabalho de Carolyne Soares de Brito, *Análise da Cotação das empresas BrasilAgro e Boa Safra*, orienta a sequência de investigação. Aqui, o objeto é o fluxo físico, sem retornos financeiros, VaR ou recomendações de investimento. A distribuição alfa-estável não é uma etapa necessária para justificar a aplicação da GEV: a análise dos máximos tem fundamentação própria.
+
+# Base de dados e controle de qualidade
+
+A base efetivamente processada é **`r basename(base$arquivo)`**, identificada pelo MD5 `r base$md5`. O intervalo observado é de **`r format(min(dados_xrs$data_hora),tz='UTC')`** a **`r format(max(dados_xrs$data_hora),tz='UTC')`** UTC. A cadência mediana é de `r base$cadencia` segundos. A variável temporal identificada foi `r base$temporal`, com unidade CF **`r base$unidades_tempo`**. Sua origem foi obtida do próprio arquivo, não do nome do produto.
+
+A variável de interesse é `xrsb_flux`, cuja unidade declarada é **`r base$unidade`**. O código de `xrsb_flag` associado a `good_data` nos metadados é **`r base$good_data`**. Valores de preenchimento são identificados antes da aplicação de fatores de escala e deslocamento; valores não finitos e fluxos não positivos são excluídos. A exclusão de fluxos não positivos é uma decisão física e computacional explícita, também necessária para os gráficos logarítmicos; suas quantidades ficam registradas. Nenhum pico positivo com qualidade adequada é removido apenas por ser elevado.
+
+```{r}
+#| label: tbl-flags
+mostrar(base$flags,'Frequência das flags antes de qualquer exclusão.')
+```
+
+```{r}
+#| label: tbl-qc
+mostrar(base$exclusoes,'Contabilidade de qualidade com categorias disjuntas e prioridade documentada no código.')
+```
+
+Há **`r num(nrow(dados_xrs))`** registros originais e **`r num(nrow(dados_limpos))`** válidos (`r round(100*nrow(dados_limpos)/nrow(dados_xrs),2)`%). Foram removidos `r num(nrow(dados_xrs)-nrow(dados_limpos))` registros. A frequência de flags é calculada antes dessa seleção. Os metadados completos são exportados em `tabelas/metadados_netcdf.csv`.
+
+## Cobertura temporal
+
+A cobertura diária usa 1.440 minutos esperados por dia UTC. A cobertura anual é apresentada tanto em relação ao ano civil completo quanto à janela disponível na base. Anos de início e término parciais devem ser lidos com essa diferença em mente. Uma lacuna é um intervalo superior a 90 segundos entre registros válidos consecutivos; ela pode decorrer de ausência de aquisição ou de rejeição por qualidade. As bordas incompletas aparecem nas coberturas, mas não na tabela de lacunas internas.
+
+```{r}
+#| label: tbl-cobertura
+mostrar(anual[,.(ano,n,esperado_ano,cobertura_ano,cobertura_janela)],'Cobertura anual (%) e número de minutos válidos.')
+```
+
+```{r}
+#| label: fig-cobertura
+#| fig-cap: "Cobertura diária e cobertura em relação ao ano civil completo. A linha tracejada indica o critério principal de elegibilidade dos blocos."
+imagens(c('cobertura_diaria','cobertura_anual'))
+```
+
+```{r}
+#| label: tbl-lacunas
+mostrar(head(exploratoria$lacunas[order(-duracao_h)],15),'Maiores lacunas internas de dados válidos; duração em horas.')
+```
+
+# Metodologia
+
+Para cada intervalo de calendário $B_j$, calcula-se $M_j=\max_{i\in B_j} X_i$. Sob condições de atração e dependência suficientemente fraca, máximos normalizados podem ser aproximados por uma GEV. A construção de blocos reduz a fragmentação de eventos, mas não torna automaticamente os máximos independentes.
+
+A distribuição é
+
+$$
+G(x;\mu,\sigma,\xi)=\exp\left\{-\left[1+\xi\frac{x-\mu}{\sigma}\right]^{-1/\xi}\right\},
+\qquad 1+\xi(x-\mu)/\sigma>0,\quad\sigma>0.
+$$
+
+No limite $\xi\to0$, obtém-se $G(x)=\exp\{-\exp[-(x-\mu)/\sigma]\}$. Localização e escala mantêm a unidade do fluxo; forma é adimensional. Os ajustes são por máxima verossimilhança no pacote `evd`, após reescalonar numericamente o fluxo pela mediana dos máximos de cada série. Essa operação linear melhora o condicionamento, sem transformar o problema em uma GEV de log-fluxos. Os resultados são reconvertidos à unidade original.
+
+A forma $\xi>0$ corresponde ao domínio Fréchet, $\xi=0$ a Gumbel e $\xi<0$ a Weibull reversa. O intervalo de confiança, e não apenas o sinal pontual, orienta a classificação. Intervalos de Wald dependem da informação observada e de regularidade; estimativas com $\xi\le-0,5$ não são aceitas como modelo principal regular.
+
+Para $b$ blocos por ano, o nível histórico de retorno de $T$ anos é o quantil
+
+$$
+z_T=G^{-1}\left(1-\frac{1}{bT}\right)
+=\mu+\frac{\sigma}{\xi}\left\{\left[-\log\left(1-\frac1{bT}\right)\right]^{-\xi}-1\right\}.
+$$
+
+Utiliza-se o limite contínuo quando $\xi=0$. Os intervalos principais são percentis de um bootstrap circular de blocos móveis sobre a grade completa dos máximos, incluindo lacunas. Esse procedimento preserva parte da dependência local, mas pressupõe uma distribuição temporal aproximadamente estável e não corrige a mistura de fases solares. A extensão não estacionária mantém escala e forma constantes e especifica $\mu(t)=\beta_0+\beta_1t$, com tempo centrado e medido em anos.
+
+# Análise exploratória
+
+```{r}
+#| label: tbl-descritiva
+mostrar(exploratoria$descritiva,'Estatísticas de todos os minutos válidos. Curtose de Pearson: Normal = 3; assimetria e curtose são momentos empíricos não corrigidos.')
+```
+
+A média é `r sci(mean(dados_limpos$xrsb_flux))` W m⁻² e a mediana é `r sci(median(dados_limpos$xrsb_flux))` W m⁻². O máximo é `r sci(max(dados_limpos$xrsb_flux))` W m⁻², correspondendo a `r round(max(dados_limpos$xrsb_flux)/median(dados_limpos$xrsb_flux),1)` vezes a mediana. A assimetria empírica é `r round(exploratoria$descritiva[medida=='Assimetria (momento)',valor],2)` e a curtose é `r round(exploratoria$descritiva[medida=='Curtose (Pearson)',valor],2)`. Esses valores quantificam a discrepância entre a região central e a cauda; não demonstram, sozinhos, uma lei de potência assintótica.
+
+Os gráficos de distribuição usam uma amostra aleatória de até `r num(config$max_visual)` minutos, com semente fixa, **exclusivamente para visualização**. Estatísticas, quantis, máximos, seleção de eventos e ajustes utilizam todos os dados pertinentes. Frequências dos histogramas são da amostra visual; sua suavização e aparência não substituem a inferência na cauda.
+
+```{r}
+#| label: fig-distribuicao
+#| fig-cap: "Histogramas nas escalas original e logarítmica, densidade na escala original e boxplots. O boxplot com eixo log10 resume a distribuição transformada."
+imagens(c('histograma','histograma_log','densidade','boxplot','boxplot_log'))
+```
+
+```{r}
+#| label: fig-normal
+#| fig-cap: "QQ-plot contra a distribuição Normal; o afastamento sistemático da reta nas caudas deve ser avaliado junto à assimetria e à heterogeneidade temporal."
+imagens('qq_normal')
+```
+
+A Normal é uma referência diagnóstica, não o modelo presumido do fluxo. A restrição física a valores positivos, a assimetria e os picos devem ser confrontados com o QQ-plot. Um desvio de normalidade não identifica automaticamente o domínio Fréchet: a forma da GEV e sua incerteza respondem a uma pergunta distinta, sobre máximos por blocos.
+
+# Análise temporal e possível mudança de distribuição
+
+```{r}
+#| label: fig-diarias
+#| fig-cap: "Mediana, média e máximo diários calculados com todos os minutos válidos. Dias vazios permanecem como lacunas."
+imagens(c('diario_mediana','diario_media','diario_maximo'))
+```
+
+```{r}
+#| label: fig-anuais
+#| fig-cap: "Distribuições anuais na amostra visual e evolução de mediana, P95, P99 e máximo anuais calculados sobre a base completa."
+imagens(c('boxplots_ano','maximos_diarios_por_ano','anual_mediana','anual_p95','anual_p99','anual_maximo'))
+```
+
+```{r}
+#| label: tbl-anuais
+mostrar(anual[,.(ano,n,media,mediana,p95,p99,maximo)],
+ 'Intensidade anual do fluxo: estatísticas em W m⁻² e número de minutos válidos.')
+```
+
+```{r}
+#| label: tbl-anuais-eventos
+mostrar(anual[,.(ano,minutos_extremos,eventos)],
+ 'Contagens anuais: minutos acima do P99,9 global e episódios separados pela regra principal de 6 horas.')
+```
+
+O maior máximo anual ocorreu em `r anual[which.max(maximo),ano]`. As medianas anuais variam de `r sci(min(anual$mediana,na.rm=TRUE))` a `r sci(max(anual$mediana,na.rm=TRUE))` W m⁻². Contagens anuais de minutos e episódios dependem da exposição e da cobertura; não devem ser interpretadas como taxas comparáveis sem consultar essa exposição.
+
+Uma comparação exploratória das médias anuais de log10 da mediana diária usa permutação de segmentos de 27 dias, em vez de tratar cada minuto como uma réplica independente. A estatística é a fração da soma de quadrados associada às diferenças entre anos, e o valor p de permutação é `r round(exploratoria$mudanca$p_permutacao,4)`. A janela de 27 dias é uma escolha metodológica para preservar dependência local, não uma medição do ciclo solar. O teste depende da permutabilidade dos segmentos sob a hipótese nula, não controla toda a dependência de longo alcance, e não demonstra estacionariedade quando deixa de rejeitar. A extensão GEV avalia outra evidência, restrita à localização dos máximos.
+
+# Análise de dependência
+
+ACF e PACF são calculadas sobre log10 das séries para reduzir a dominância de alguns picos. A transformação não é usada no ajuste da GEV. Para evitar autocorrelações artificiais, cada análise usa o maior trecho **contíguo** sem lacunas na grade regular. A tabela informa quanto da série foi efetivamente utilizado; a dependência pode diferir fora desse trecho.
+
+```{r}
+#| label: tbl-trechos
+mostrar(dependencia$trechos,'Tamanho da grade, do maior trecho contíguo e número de posições ausentes ou inelegíveis.')
+```
+
+```{r}
+#| label: tbl-ljung
+mostrar(dependencia$testes,'Ljung–Box em diferentes lags; valores p exploratórios, sem correção por multiplicidade.')
+```
+
+```{r}
+#| label: fig-dependencia
+#| fig-cap: "ACF/PACF das séries logarítmicas no maior trecho contíguo. Bandas pontuais aproximadas sob ruído branco; não são simultâneas."
+imagens(paste0('dependencia_',names(dependencia$plots)))
+```
+
+Ljung–Box avalia um conjunto de autocorrelações, não todas as formas de dependência. Um valor p superior a 0,05 não prova independência. Tendência ou variação da atividade solar também podem produzir autocorrelação, enquanto episódios solares podem agrupar excedências mesmo quando a correlação linear parece pequena. Por isso, a escolha dos blocos não foi feita procurando o primeiro valor p não significativo, procedimento empregado como critério no trabalho de referência.
+
+# Seleção dos blocos
+
+Dias UTC, semanas de segunda a domingo e meses de calendário são considerados. Um bloco só é elegível quando tem pelo menos `r 100*config$cobertura`% dos minutos esperados no **intervalo completo**, inclusive nas bordas do arquivo. Assim, uma semana parcial não é artificialmente tratada como completa. Blocos vazios são registrados e permanecem como lacunas.
+
+```{r}
+#| label: tbl-blocos
+mostrar(modelos$comparacao[,.(bloco,n,mu,sigma,xi,ep_xi,AIC)],
+ 'Parâmetros por bloco. Localização/escala em W m⁻²; AIC descritivo, não comparável para seleção entre blocos diferentes.')
+```
+
+```{r}
+#| label: tbl-blocos-diagnosticos
+mostrar(modelos$comparacao[,.(bloco,total,n,fracao_retida,acf1,rmse_pp,convergiu)],
+ 'Disponibilidade, retenção (proporção), dependência e diagnóstico PP por bloco.')
+```
+
+```{r}
+#| label: tbl-cobertura-sens
+mostrar(block$sensibilidade,'Sensibilidade da quantidade de blocos disponíveis ao limite de cobertura.')
+```
+
+```{r}
+#| label: fig-maximos
+#| fig-cap: "Máximos elegíveis nas três agregações. Blocos rejeitados interrompem as linhas."
+imagens(c('maximos_diario','maximos_semanal','maximos_mensal'))
+```
+
+`r modelos$justificativa`
+
+Máximos diários fornecem mais informação temporal, mas podem separar um mesmo episódio em dias adjacentes. A agregação semanal reduz parte dessa fragmentação. A mensal retém menos máximos e mistura a evolução dentro do mês, podendo ampliar a incerteza, mas representa um período mais longo de atividade. A janela amostral permanece limitada a cerca de oito anos, independentemente da quantidade de minutos. A tabela de sensibilidade quantifica disponibilidade; não constitui uma prova de estabilidade dos parâmetros, que também são comparados entre as três agregações.
+
+# Modelagem dos valores extremos
+
+O modelo principal é uma **GEV estacionária dos máximos `r principal`**, interpretada como aproximação histórica agregada. A extensão temporal é comparada abaixo e pode tornar essa interpretação insuficiente para previsões.
+
+```{r}
+#| label: tbl-parametros
+mostrar(modelos$parametros,'Parâmetros GEV e IC de Wald de 95% (aproximação de independência). Mu e sigma em W m⁻²; xi adimensional.')
+```
+
+```{r}
+#| label: tbl-parametros-boot
+mostrar(retornos$bootstrap,'IC percentil de 95% por bootstrap de blocos móveis, utilizado na classificação da forma.')
+```
+
+A estimativa de forma é **`r round(xi,4)`**, e seu IC bootstrap é [`r round(icxi$inferior,4)`, `r round(icxi$superior,4)`]. A classificação compatível com esse intervalo é: **`r retornos$classe`**. Trata-se de inferência condicional ao modelo, à cobertura e à aproximação de estabilidade temporal; um limite superior finito em uma GEV com forma negativa não é uma barreira física comprovada para o Sol.
+
+Os intervalos principais usaram `r retornos$sucessos` ajustes válidos em `r retornos$B` replicações, com segmentos de `r retornos$L` blocos de calendário. A taxa de êxito é documentada e a análise interrompe se menos de 80% dos ajustes, ou menos de 100, forem válidos. A janela bootstrap é uma escolha de regularização da dependência, não um parâmetro físico.
+
+## Diagnósticos
+
+```{r}
+#| label: fig-gev
+#| fig-cap: "QQ, PP e densidade da GEV para cada agregação ajustável. O alinhamento central deve ser distinguido do comportamento dos maiores máximos."
+nms<-unlist(lapply(names(modelos$modelos),function(t) if(modelos$modelos[[t]]$ok) paste0(c('qq_gev_','pp_gev_','densidade_gev_'),t) else character()))
+imagens(nms)
+```
+
+No modelo principal, o erro quadrático médio do PP é `r signif(modelos$comparacao[bloco==principal,rmse_pp],3)`. Essa medida dá peso à região central e não é um teste de cauda. No QQ, o afastamento dos maiores pontos da diagonal deve ser lido como limitação na extrapolação; no PP, curvatura persistente sugere discrepância global. A densidade pode ocultar erros na cauda por concentrar massa na região central. Portanto, convergência numérica e gráficos centrais não bastam para afirmar que o modelo representa os maiores eventos.
+
+Para o PIT estacionário no maior trecho contíguo, Ljung–Box produz valor p `r signif(modelos$pit_lb,3)`. Dependência residual limita a interpretação da Hessiana como informação de observações independentes. Não são exibidas bandas QQ que pressuponham independência sem explicitar essa hipótese; a incerteza dos níveis de retorno é examinada pelo bootstrap.
+
+```{r}
+#| label: tbl-avisos
+mostrar(modelos$comparacao[,.(bloco,avisos)],'Avisos numéricos registrados nas tentativas de ajuste; tentativas malsucedidas não são selecionadas.')
+```
+
+## Extensão não estacionária
+
+```{r}
+#| label: tbl-nao-estacionaria
+mostrar(modelos$comparacao_ns,'Comparação sobre os mesmos máximos: localização constante versus localização linear, escala e forma constantes.')
+```
+
+`r if(modelos$ns$ok) paste0('A estatística de razão de verossimilhanças é ',round(modelos$lr,3),', com valor p aproximado ',signif(modelos$p_lr,3),'.') else paste('O ajuste linear não foi validado:',modelos$ns$erro)`
+
+`r if(modelos$evidencia_ns) 'A redução de AIC superior a 2 e o teste nominal a 5% favorecem a extensão linear nesta comparação. A GEV estacionária deve ser tratada como resumo histórico, e não como distribuição invariável para o futuro.' else 'Os critérios conjuntos de redução de AIC superior a 2 e teste nominal a 5% não favorecem suficientemente a extensão linear. Isso não demonstra estacionariedade e não exclui mudanças cíclicas, de escala ou de forma.'`
+
+```{r}
+#| label: tbl-parametros-ns
+if(!is.null(modelos$ns_parametros)) mostrar(modelos$ns_parametros,
+ 'Parâmetros da extensão linear, unidades originais e IC de Wald exploratórios. loc é a localização na data média dos blocos elegíveis.')
+```
+
+`r if(modelos$ns$ok && length(modelos$ns$avisos)) paste('Avisos registrados na extensão:',paste(modelos$ns$avisos,collapse='; ')) else 'Nenhum aviso numérico adicional foi registrado no ajuste linear validado, ou o ajuste não pôde ser validado conforme informado acima.'`
+
+O teste de razão de verossimilhanças usa a aproximação qui-quadrado com um grau de liberdade, sob regularidade e independência aproximada; com dependência residual, seu valor p é exploratório. O AIC é comparável **nesta** análise, porque as observações e a escala da resposta são as mesmas. Uma tendência linear ao longo de 2017–2025 não representa integralmente um ciclo solar e não deve ser extrapolada indefinidamente.
+
+```{r}
+#| label: fig-pit
+#| fig-cap: "Quando o ajuste linear converge, PP condicional e PIT no tempo comparam a transformação estacionária à extensão temporal."
+if(modelos$ns$ok) imagens(c('pp_gev_nao_estacionaria','pit_tempo'))
+```
+
+# Níveis de retorno
+
+```{r}
+#| label: tbl-retornos
+mostrar(retornos$tabela[,.(anos,blocos,estimativa,inferior,superior,unidade)],'Níveis históricos de retorno e IC bootstrap de 95%. Fluxos em W m⁻². A probabilidade anual assume blocos independentes e distribuição constante.')
+```
+
+```{r}
+#| label: fig-retornos
+#| fig-cap: "Curva de retorno estacionária histórica e intervalo bootstrap. Dez anos já extrapolam o período observado; a faixa não inclui toda a incerteza estrutural do modelo."
+imagens('niveis_retorno')
+```
+
+Para o bloco `r principal`, são usados `r round(switch(principal,diario=365.2425,semanal=365.2425/7,mensal=12),4)` blocos por ano. O nível de 10 anos é `r sci(retornos$tabela[anos==10,estimativa])` W m⁻², com IC de 95% [`r sci(retornos$tabela[anos==10,inferior])`, `r sci(retornos$tabela[anos==10,superior])`] W m⁻². Ele corresponde à probabilidade de excedência **por bloco** $1/(10b)$ no modelo histórico. Não significa ocorrência agendada uma vez a cada dez anos.
+
+Sob independência, a probabilidade de pelo menos uma excedência em um ano é $1-(1-1/(bT))^b$, que não é exatamente $1/T$. A média de espera de $bT$ blocos exige estabilidade e independência aproximadas. Mudanças de atividade e agrupamento de flares alteram essa leitura. Um IC frequentista de 95% descreve a cobertura de um procedimento sob suas hipóteses, não uma probabilidade posterior de 95% para um parâmetro fixo.
+
+```{r}
+#| label: tbl-condicionais
+if(!is.null(retornos$condicional)) mostrar(retornos$condicional[,.(anos,referencia,estimativa,inferior,superior)],
+ 'Extensão: quantis condicionais com a covariável congelada na data do último bloco; IC delta sob independência aproximada, em W m⁻².')
+```
+
+Esses quantis condicionais representam o cenário de manter a covariável temporal no valor de referência. Não são níveis de retorno para uma trajetória futura de atividade variável. Sob não estacionariedade, uma avaliação prospectiva exigiria integrar probabilidades de excedência ao longo de uma trajetória de covariáveis fisicamente justificada. A incerteza delta da extensão não inclui dependência nem incerteza sobre essa trajetória e não deve ser confundida com a faixa bootstrap histórica.
+
+## Maiores minutos e episódios temporalmente separados
+
+```{r}
+#| label: tbl-picos
+mostrar(retornos$picos[,.(posicao,data,horario,xrsb_flux)],'Vinte maiores minutos válidos, em UTC, fluxo em W m⁻². Não são necessariamente vinte eventos distintos.')
+```
+
+Excedências acima do P99,9 global, igual a `r sci(exploratoria$limiar_eventos)` W m⁻², são agrupadas por uma regra de *runs*: um novo episódio começa quando o intervalo entre excedências supera a janela indicada. A regra principal usa seis horas; uma e 24 horas são sensibilidades. Um grupo pode durar mais que a janela se houver excedências sucessivas próximas. A regra não é um catálogo físico de flares, e lacunas de aquisição podem separar artificialmente episódios.
+
+```{r}
+#| label: tbl-eventos-sens
+mostrar(retornos$sensibilidade,'Sensibilidade do número de episódios ao intervalo entre excedências.')
+```
+
+```{r}
+#| label: tbl-eventos
+mostrar(head(retornos$eventos,20),'Vinte maiores episódios pela regra de seis horas; n_minutos é a quantidade de excedências, não a duração contínua do flare.')
+```
+
+```{r}
+#| label: fig-eventos
+#| fig-cap: "Máximos diários e os vinte maiores picos de episódios; somente os cinco maiores recebem rótulos."
+imagens('eventos_extremos')
+```
+
+# Discussão
+
+O estudo distingue a análise de todos os minutos da inferência sobre máximos. Milhões de medidas não equivalem a milhões de episódios independentes, nem aumentam a duração do registro. A cobertura mínima protege contra máximos calculados a partir de poucos minutos, mas não elimina viés: ausência de dados pode estar associada à intensidade do evento. Não se imputaram picos faltantes.
+
+A agregação principal foi `r principal`, com `r modelos$comparacao[bloco==principal,n]` máximos elegíveis. A forma estimada de `r round(xi,3)` e seu intervalo sustentam a classificação apresentada, dentro das hipóteses do ajuste. A comparação entre blocos mostra como o número de máximos, a dependência e o parâmetro de forma mudam com a agregação; não existe uma escolha universal de calendário que garanta o regime assintótico.
+
+A avaliação de não estacionariedade é `r if(modelos$evidencia_ns) 'favorável à extensão linear pelos critérios nominais empregados' else 'inconclusiva ou insuficiente para favorecer a extensão linear pelos critérios conjuntos empregados'`. Ambas as possibilidades exigem cautela: ausência de evidência não é evidência de constância, e um ajuste linear favorável não demonstra uma dinâmica solar linear. O bootstrap móvel pressupõe estabilidade aproximada e seus intervalos não incorporam integralmente essas alternativas estruturais.
+
+Em relação ao estudo de referência, três adaptações são centrais. Primeiro, testes de autocorrelação são diagnósticos e não certificados de independência. Segundo, níveis de retorno são quantis probabilísticos em unidades físicas, sem interpretação financeira. Terceiro, a incerteza da forma e a possível heterogeneidade temporal impedem uma conclusão baseada apenas no sinal pontual. As fórmulas foram implementadas com o suporte da GEV e os limites numéricos apropriados; não se utiliza a tabela de momentos da distribuição alfa-estável do trabalho de referência, cuja discussão não é necessária a esta aplicação.
+
+# Conclusão
+
+Com `r num(nrow(dados_limpos))` observações válidas, foi possível construir máximos por calendário e comparar três agregações. O bloco principal foi **`r principal`**, selecionado pela regra explícita de agregação e viabilidade após o exame das alternativas. Os parâmetros estimados foram $\hat\mu=$ `r sci(modelos$parametros[parametro=='mu',estimativa])` W m⁻², $\hat\sigma=$ `r sci(modelos$parametros[parametro=='sigma',estimativa])` W m⁻² e $\hat\xi=$ `r round(xi,4)`.
+
+A classificação da forma é **`r retornos$classe`**. O nível histórico de dez anos, `r sci(retornos$tabela[anos==10,estimativa])` W m⁻², é uma extrapolação condicional às hipóteses e deve ser acompanhado de seu intervalo, dos diagnósticos e da avaliação temporal. `r if(modelos$evidencia_ns) 'A evidência nominal de mudança na localização reforça que o modelo estacionário resume o período passado, sem garantir validade preditiva futura.' else 'A comparação linear não eliminou a possibilidade de variações não lineares ou cíclicas e não autoriza presumir validade preditiva futura.'` Um registro maior e covariáveis solares independentes seriam necessários para avançar na interpretação física e em projeções.
+
+# Referências e reprodutibilidade {.unnumbered}
+
+- Brito, Carolyne Soares de. *Análise da Cotação das empresas BrasilAgro e Boa Safra*. Trabalho acadêmico, Universidade de Brasília, Departamento de Estatística. PDF fornecido pelo usuário; sem data editorial verificada. Cópia em `referencias/Carolyne.pdf`.
+- Fisher, R. A.; Tippett, L. H. C. (1928). *On the estimation of the frequency distributions of the largest or smallest member of a sample*. Proceedings of the Cambridge Philosophical Society, 24, 180–190. Referência explicitamente presente no trabalho fornecido.
+- Ljung, G. M.; Box, G. E. P. (1978). *On a measure of lack of fit in time series models*. Biometrika, 65(2), 297–303. Referência explicitamente presente no trabalho fornecido.
+- Produto GOES-16: identificação, unidades, atributos globais e histórico registrados no próprio NetCDF e exportados em `tabelas/metadados_netcdf.csv`. Não foi atribuída uma referência bibliográfica externa não verificada.
+
+A análise é refeita integralmente ao renderizar; não se reutiliza um cache com dados antigos. A identificação por MD5, as escolhas metodológicas e as versões dos pacotes permitem rastrear a execução. As tabelas CSV e figuras PNG são gravadas automaticamente.
+
+```{r}
+#| label: citacoes-pacotes
+#| results: asis
+for(p in c('ncdf4','data.table','ggplot2','evd','knitr')) {
+  cat('\n\n**Pacote ',p,'**\n\n',paste(format(utils::citation(p),style='text'),collapse='\n'),'\n',sep='')
+}
+```
+
+```{r}
+#| label: sessao
+sessionInfo()
+```

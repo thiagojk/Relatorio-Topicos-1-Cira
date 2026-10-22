@@ -1,0 +1,17 @@
+:root { --bs-body-color: #24313b; --bs-body-bg: #fff; --bs-link-color: #24536b; }
+body { font-family: Georgia, 'Times New Roman', serif; line-height: 1.75; }
+main.content { max-width: 980px; }
+h1,h2,h3,h4,.title,.subtitle,nav { font-family: system-ui, sans-serif; color: #243e50; }
+h1 { margin-top: 2.2rem; } h2 { margin-top: 1.6rem; }
+p { text-align: justify; }
+.quarto-title-block { border-bottom: 2px solid #24536b; padding-bottom: 1.2rem; margin-bottom: 2.5rem; }
+.figure-caption,.figcaption { font-size: .88rem; color: #46515a; text-align: left; }
+table { font-family: system-ui, sans-serif; font-size: .82rem; font-variant-numeric: tabular-nums; }
+.cell-output-display { overflow-x: auto; margin-bottom: 1rem; }
+pre { font-size: .78rem; } .sidebar nav { font-size: .85rem; }
+@media print { body { font-size: 11pt; } nav { display: none; } }
+
+/* A legenda numerada do Quarto já identifica cada tabela. */
+.quarto-float-tbl table caption { display: none; }
+table td { white-space: nowrap; }
+table th { white-space: normal; }
