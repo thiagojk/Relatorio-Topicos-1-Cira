@@ -48,6 +48,29 @@ stopifnot(nrow(b$dados_xrs)==verdade$n,nrow(b$dados_limpos)==verdade$validos,
 bl<-construir_blocos(b)
 stopifnot(nrow(bl$blocos$mensal)==60L,all(bl$blocos$mensal$n>0),
   bl$blocos$diario[inicio==as.Date('2020-02-29'),esperado]==1440)
+# Contrato real: máscaras compostas, dimensão sem coordenada e faixa valid_min/max.
+tc<-ncdf4::ncdim_def('time','seconds since 2000-01-01 12:00:00 UTC',
+  as.numeric(difftime(as.POSIXct('2017-02-07',tz='UTC'),as.POSIXct('2000-01-01 12:00:00',tz='UTC'),units='secs'))+(0:6)*60)
+qd<-ncdf4::ncdim_def('quad_diode','',1:4,create_dimvar=FALSE)
+vf<-ncdf4::ncvar_def('xrsb_flux','W/m2',list(tc),missval=-9999)
+vq<-ncdf4::ncvar_def('xrsb_flag','1',list(tc),missval=255,prec='short')
+va<-ncdf4::ncvar_def('auxiliar','1',list(qd),missval=-9999)
+mascara_arq<-'Dados/contrato_mascaras.nc'
+nc<-ncdf4::nc_create(mascara_arq,list(vf,vq,va),force_v4=TRUE)
+ncdf4::ncatt_put(nc,'xrsb_flag','flag_values',c(0,1,2,4))
+ncdf4::ncatt_put(nc,'xrsb_flag','flag_masks',c(3,1,2,4))
+ncdf4::ncatt_put(nc,'xrsb_flag','flag_meanings','good_data eclipse bad_data interpolated')
+ncdf4::ncatt_put(nc,'xrsb_flux','valid_min',1e-9)
+ncdf4::ncatt_put(nc,'xrsb_flux','valid_max',.2)
+ncdf4::ncvar_put(nc,'xrsb_flux',c(rep(1e-6,6),1e-10))
+ncdf4::ncvar_put(nc,'xrsb_flag',c(0,1,2,4,5,255,0))
+ncdf4::nc_close(nc)
+bm<-ler_xrs(mascara_arq)
+stopifnot(nrow(bm$dados_limpos)==1L,bm$good_data==0,
+  bm$flags[xrsb_flag==5,significado]=='eclipse | interpolated',
+  bm$exclusoes[motivo=='fluxo fora da faixa válida dos metadados',N]==1L,
+  bm$validacao$total==7L,bm$validacao$removidos==6L,
+  !any(grepl('HAS NO DIMVAR',bm$avisos_metadados,fixed=TRUE)))
 # Testes de falhas usam cópias; não criam repetidamente fixtures grandes.
 nc<-ncdf4::nc_open(config$arquivo,write=TRUE)
 ncdf4::ncatt_put(nc,'xrsb_flag','flag_meanings','unknown bad_data');ncdf4::nc_close(nc)
@@ -71,7 +94,10 @@ stopifnot(file.exists('resultados/resumo.rds'),modelos$principal=='mensal',
           all(modelos$comparacao$convergiu),
           nrow(retornos$picos)==20,
           all(diff(retornos$sensibilidade$n_eventos)<=0),
-          retornos$sucessos>=120)
+          retornos$sucessos>=120,
+          base$validacao$validos==verdade$validos,
+          all(retornos$eventos$posicao==seq_len(nrow(retornos$eventos))),
+          !modelos$ns$ok || modelos$ns$fit$deviance<=modelos$modelos[[modelos$principal]]$fit$deviance+.001)
 # Fórmula de retorno e invariância à reescala.
 e<-modelos$modelos$mensal$fit$estimate
 s<-modelos$modelos$mensal$escala

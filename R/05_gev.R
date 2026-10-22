@@ -1,32 +1,47 @@
-ajustar_seguro <- function(x, tempo=NULL, erros=TRUE) {
-  avisos<-character(); tentativas<-list()
-  sc<-sd(x)*sqrt(6)/pi
-  if(length(x)<30 || !is.finite(sc) || sc<=0) return(list(ok=FALSE,erro='Menos de 30 máximos ou variância nula.'))
-  for(xi in c(0,.15,-.1,.4)) {
-    st<-list(loc=mean(x)-.57722*sc,scale=sc,shape=xi)
-    if(!is.null(tempo)) st<-c(st[1],list(loctempo=0),st[-1])
-    f<-tryCatch(withCallingHandlers(
-      evd::fgev(x,start=st,nsloc=if(is.null(tempo)) NULL else data.frame(tempo=tempo),
-        std.err=FALSE, control=list(maxit=1500)),
-      warning=function(w) {avisos<<-c(avisos,conditionMessage(w)); invokeRestart('muffleWarning')}),
-      error=function(e) e)
-    if(!inherits(f,'error') && identical(f$convergence,'successful') && is.finite(f$deviance) && f$deviance<2e6) {
-      loc<-f$estimate['loc']; if(!is.null(tempo)) loc<-loc+f$estimate['loctempo']*tempo
-      suporte<-1+f$estimate['shape']*(x-loc)/f$estimate['scale']
-      if(all(is.finite(suporte)&suporte>0)) tentativas[[length(tentativas)+1L]]<-f
-    }
+ajustar_seguro <- function(x, tempo=NULL, erros=TRUE, inicio=NULL) {
+  avisos<-character();tentativas<-list()
+  if(length(x)<30 || !is.finite(sd(x)) || sd(x)<=0) return(list(ok=FALSE,erro='Menos de 30 máximos ou variância nula.'))
+  valido<-function(f) {
+    if(inherits(f,'error') || !identical(f$convergence,'successful') || !is.finite(f$deviance) || f$deviance>=2e6) return(FALSE)
+    e<-f$estimate;loc<-e['loc'];if(!is.null(tempo))loc<-loc+e['loctempo']*tempo
+    sup<-1+e['shape']*(x-loc)/e['scale']
+    if(e['scale']<=0 || any(!is.finite(sup)|sup<=0))return(FALSE)
+    ll<-evd::dgev(x,loc=loc,scale=e['scale'],shape=e['shape'],log=TRUE)
+    all(is.finite(ll)) && abs(-2*sum(ll)-f$deviance)<1e-3
   }
-  if(!length(tentativas)) return(list(ok=FALSE,erro=paste('Nenhuma otimização válida.',paste(unique(avisos),collapse='; '))))
+  starts<-list()
+  if(!is.null(inicio)) {
+    st<-as.list(inicio)
+    if(!is.null(tempo) && !'loctempo'%in%names(st))st<-c(st[1],list(loctempo=0),st[-1])
+    starts[[1]]<-st
+  }
+  escalas<-unique(c(IQR(x)/1.57,sd(x)*sqrt(6)/pi))
+  # Localização inicial construída dentro do suporte; escalas robusta e de momentos.
+  for(sc in escalas[is.finite(escalas)&escalas>0]) for(xi in c(0,.2,1,3)) {
+    if(!is.null(inicio) && sc!=escalas[1])next
+    loc<-if(xi==0)median(x)-.3665*sc else min(x)-.01*sc+sc/xi
+    st<-list(loc=loc,scale=sc,shape=xi)
+    if(!is.null(tempo))st<-c(st[1],list(loctempo=0),st[-1])
+    starts[[length(starts)+1L]]<-st
+  }
+  executar<-function(st,ep=FALSE) tryCatch(withCallingHandlers(
+    evd::fgev(x,start=st,nsloc=if(is.null(tempo))NULL else data.frame(tempo=tempo),
+      method='Nelder-Mead',std.err=ep,
+      control=list(maxit=10000,reltol=1e-10,ndeps=rep(1e-5,length(st)))),
+    warning=function(w){avisos<<-c(avisos,conditionMessage(w));invokeRestart('muffleWarning')}),error=function(e)e)
+  for(st in starts) {
+    f<-executar(st)
+    if(valido(f))tentativas[[length(tentativas)+1L]]<-f
+  }
+  if(!length(tentativas))return(list(ok=FALSE,erro=paste('Nenhuma otimização válida.',paste(unique(avisos),collapse='; '))))
   f<-tentativas[[which.min(vapply(tentativas,function(z)z$deviance,numeric(1)))]]
   if(erros) {
-    ff<-tryCatch(withCallingHandlers(evd::fgev(x,start=as.list(f$estimate),
-      nsloc=if(is.null(tempo))NULL else data.frame(tempo=tempo),std.err=TRUE,control=list(maxit=1500)),
-      warning=function(w) {avisos<<-c(avisos,conditionMessage(w));invokeRestart('muffleWarning')}),error=function(e)e)
-    if(!inherits(ff,'error') && identical(ff$convergence,'successful') &&
-       abs(ff$deviance-f$deviance)<.01) f<-ff else avisos<-c(avisos,'Informação observada indisponível/inconsistente; IC de Wald indisponível.')
+    ff<-executar(as.list(f$estimate),TRUE)
+    if(valido(ff) && abs(ff$deviance-f$deviance)<.01) f<-ff else
+      avisos<-c(avisos,'Informação observada indisponível/inconsistente; IC de Wald indisponível.')
   }
-  # Erros da Hessiana exigem regularidade; xi <= -0,5 é explicitamente sinalizado.
-  if(f$estimate['shape']<=-.5) avisos<-c(avisos,'xi <= -0,5: inferência assintótica regular não garantida.')
+  if(f$estimate['shape']<=-.5)avisos<-c(avisos,'xi <= -0,5: inferência assintótica regular não garantida.')
+  if(f$estimate['shape']>=1)avisos<-c(avisos,'xi >= 1: o modelo agregado implica média infinita; examinar heterogeneidade temporal e extrapolação.')
   list(ok=TRUE,fit=f,avisos=unique(avisos))
 }
 modelar <- function(block,dep) {
@@ -48,21 +63,53 @@ modelar <- function(block,dep) {
     } else linhas[[t]]<-data.table(bloco=t,total=nrow(b),n=length(x),fracao_retida=mean(b$elegivel),
       mu=NA_real_,sigma=NA_real_,xi=NA_real_,ep_xi=NA_real_,AIC=NA_real_,acf1=NA_real_,rmse_pp=NA_real_,convergiu=FALSE,avisos=a$erro)
   }
-  comp<-rbindlist(linhas);csv(comp,'comparacao_blocos')
+  comp<-rbindlist(linhas)
+  comp[,`:=`(acf1_pares=NA_real_,n_pares=0L)]
+  for(t in tipos) {
+    b0<-block$blocos[[t]];z<-log10(ifelse(b0$elegivel,b0$maximo,NA_real_))
+    anterior<-head(z,-1);seguinte<-tail(z,-1);ok<-is.finite(anterior)&is.finite(seguinte)
+    rho<-if(sum(ok)>=3L)stats::cor(anterior[ok],seguinte[ok]) else NA_real_
+    comp[bloco==t,`:=`(acf1_pares=rho,n_pares=sum(ok))]
+  }
+  csv(comp,'comparacao_blocos')
+  sensibilidade<-list()
+  for(t in tipos) {
+    a<-modelos[[t]];if(!a$ok)next
+    b0<-block$blocos[[t]]
+    variacoes<-list()
+    for(corte in config$coberturas)variacoes[[paste0('cobertura_',corte)]]<-b0[cobertura>=corte & is.finite(maximo),maximo]
+    cheio<-b0[elegivel==TRUE,maximo]
+    for(k in c(1L,3L))variacoes[[paste0('sem_',k,'_maiores')]]<-head(sort(cheio),-k)
+    for(v in names(variacoes)) {
+      x<-variacoes[[v]];z<-ajustar_seguro(x/a$escala,erros=FALSE,inicio=a$fit$estimate)
+      sensibilidade[[paste(t,v)]]<-if(z$ok)data.table(bloco=t,variacao=v,n=length(x),
+        mu=z$fit$estimate['loc']*a$escala,sigma=z$fit$estimate['scale']*a$escala,
+        xi=z$fit$estimate['shape'],delta_xi=z$fit$estimate['shape']-a$fit$estimate['shape']) else
+        data.table(bloco=t,variacao=v,n=length(x),mu=NA_real_,sigma=NA_real_,xi=NA_real_,delta_xi=NA_real_)
+    }
+  }
+  sensibilidade<-rbindlist(sensibilidade);csv(sensibilidade,'sensibilidade_ajustes')
   # A escolha ocorre somente após comparação. Preferência por maior agregação física,
   # condicionada a n>=50, erro de forma finito, suporte e convergência; sem seleção por p ou AIC entre blocos.
   candidatos<-rev(tipos)
   admissiveis<-comp[convergiu & n>=50 & is.finite(ep_xi) & xi>-.5]$bloco
-  principal<-candidatos[candidatos%in%admissiveis][1]
+  aptos<-comp[bloco%in%admissiveis & is.finite(acf1_pares) & n_pares>=30L]
+  # ACF é apenas um dos critérios: elegibilidade, suporte e regularidade são prévios.
+  # Empates de até 0,02 favorecem maior agregação; sem seleção por valor p.
+  menor_acf<-if(nrow(aptos))min(abs(aptos$acf1_pares)) else Inf
+  preferidos<-aptos[abs(acf1_pares)<=menor_acf+.02]$bloco
+  principal<-candidatos[candidatos%in%preferidos][1]
   if(is.na(principal)) stop('Nenhum bloco com ajuste regular e >=50 máximos; consulte tabelas/comparacao_blocos.csv. Não forçar GEV.')
   estavel<-comp[bloco==principal]
   justificativa<-paste0('Escolheu-se o bloco ',principal,
-    ' como a maior agregação entre as alternativas com pelo menos 50 máximos elegíveis, convergência e erro padrão de forma finito, na região regular xi > -0,5. ',
-    'A comparação completa inclui retenção, dependência e discrepância PP. Esta regra privilegia a agregação de episódios solares e reduz a fragmentação de eventos, mas não garante independência nem superioridade do ajuste. ',
-    'ACF e diagnósticos são apresentados como ressalvas, e resultados das alternativas permanecem disponíveis; AIC entre blocos não foi usado para seleção.')
+    ' após comparar as três agregações: pelo menos 50 máximos elegíveis, suporte válido, convergência e erro da forma finito (xi > -0,5) são requisitos prévios. ',
+    'Entre os candidatos regulares, priorizou-se a menor correlação absoluta dos pares adjacentes da série logarítmica em toda a grade de calendário (sem colapsar lacunas), com tolerância de 0,02 para favorecer agregação maior. ',
+    'No bloco escolhido, correlação dos pares adjacentes = ',round(estavel$acf1_pares,3),', N = ',estavel$n,
+    ', com ',estavel$n_pares,' pares, e discrepância PP = ',signif(estavel$rmse_pp,3),'. Essa escolha é exploratória: menor ACF não prova independência; qualidade, estabilidade e diagnósticos permanecem condições para interpretação. AIC entre blocos e valores p não selecionam o modelo.')
   b<-block$blocos[[principal]][elegivel == TRUE]; a<-modelos[[principal]]; f<-a$fit
   tempo<-as.numeric(b$inicio-mean(b$inicio))/365.2425
-  ns<-ajustar_seguro(b$maximo/a$escala,tempo)
+  ns<-ajustar_seguro(b$maximo/a$escala,tempo,inicio=f$estimate)
+  if(ns$ok && ns$fit$deviance>f$deviance+.001) ns<-list(ok=FALSE,erro='O modelo ampliado não alcançou a verossimilhança do modelo aninhado; LRT não calculado.')
   comparacao_ns<-data.table(modelo='Estacionário',parametros=3L,AIC=f$deviance+6,deviance=f$deviance)
   if(ns$ok) comparacao_ns<-rbind(comparacao_ns,data.table(modelo='Localização linear no tempo',parametros=4L,
     AIC=ns$fit$deviance+8,deviance=ns$fit$deviance))
@@ -91,8 +138,10 @@ modelar <- function(block,dep) {
     x<-sort(block$blocos[[t]][elegivel == TRUE,maximo]);p<-ppoints(length(x));e<-a$fit$estimate
     teor<-evd::qgev(p,loc=e['loc'],scale=e['scale'],shape=e['shape'])*a$escala
     pp<-evd::pgev(x/a$escala,loc=e['loc'],scale=e['scale'],shape=e['shape'])
-    plots[[paste0('qq_',t)]]<-fig(ggplot(data.table(teor,x),aes(teor,x))+geom_point(color=cor,alpha=.5)+
-      geom_abline(slope=1,intercept=0)+labs(title=paste('QQ GEV:',t),x='Quantil GEV (W m⁻²)',y='Quantil observado (W m⁻²)'),paste0('qq_gev_',t))
+    qq<-ggplot(data.table(teor,x),aes(teor,x))+geom_point(color=cor,alpha=.5)+
+      geom_abline(slope=1,intercept=0)+labs(title=paste('QQ GEV:',t),x='Quantil GEV (W m⁻²)',y='Quantil observado (W m⁻²)')
+    if(all(teor>0)&all(x>0)&max(teor)/min(teor)>100)qq<-qq+scale_x_log10()+scale_y_log10()+labs(subtitle='Ambos os eixos em escala log10; a diagonal representa igualdade.')
+    plots[[paste0('qq_',t)]]<-fig(qq,paste0('qq_gev_',t))
     plots[[paste0('pp_',t)]]<-fig(ggplot(data.table(p,pp),aes(p,pp))+geom_point(color=cor,alpha=.5)+
       geom_abline(slope=1,intercept=0)+labs(title=paste('PP GEV:',t),x='Probabilidade empírica',y='Probabilidade GEV'),paste0('pp_gev_',t))
     xx<-seq(min(x),max(x),length.out=600)
@@ -114,10 +163,10 @@ modelar <- function(block,dep) {
       geom_point(color=cor)+geom_abline(slope=1,intercept=0)+
       labs(title='PP: GEV com localização linear',x='Probabilidade empírica',y='PIT condicional'),'pp_gev_nao_estacionaria')
     plots$pit_tempo<-fig(ggplot(data.table(data=grid$inicio,pit=u,pit_ns=un),aes(data,pit))+
-      geom_point(color=cor)+geom_line(aes(y=pit_ns),color='#9b513d',linewidth=.4)+
+      geom_point(color=cor,na.rm=TRUE)+geom_line(aes(y=pit_ns),color='#9b513d',linewidth=.4,na.rm=TRUE)+
       labs(title='PIT no tempo: estacionário (pontos) e linear (linha)',x='Data (UTC)',y='Probabilidade integral transformada'),'pit_tempo')
   }
-  list(modelos=modelos,comparacao=comp,principal=principal,justificativa=justificativa,parametros=parametros,
+  list(modelos=modelos,comparacao=comp,sensibilidade=sensibilidade,principal=principal,justificativa=justificativa,parametros=parametros,
     ns=ns,ns_parametros=ns_parametros,comparacao_ns=comparacao_ns,lr=lr,p_lr=plr,evidencia_ns=evidencia,
     centro_tempo=mean(b$inicio),plots=plots,pit_lb=pitlb)
 }

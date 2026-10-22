@@ -7,8 +7,11 @@ analisar_dependencia <- function(exploratoria,block) {
   resultados<-list(); graficos<-list(); resumo<-list()
   for(nm in names(series)) {
     v<-serie_contigua(series[[nm]]); n<-length(v)
+    zlog<-log10(series[[nm]]);ant<-head(zlog,-1);seg<-tail(zlog,-1)
+    pares<-is.finite(ant)&is.finite(seg)
+    rho<-if(sum(pares)>=3L)stats::cor(ant[pares],seg[pares]) else NA_real_
     resumo[[nm]]<-data.table(serie=nm,total=length(series[[nm]]),trecho=n,
-      ausentes=sum(!is.finite(series[[nm]])))
+      ausentes=sum(!is.finite(series[[nm]])),n_pares=sum(pares),cor_pares=rho)
     if(n<12L || sd(v)==0) next
     y<-log10(v); lagmax<-min(36L,floor(n/4))
     ac<-as.numeric(acf(y,lag.max=lagmax,plot=FALSE)$acf)[-1]

@@ -3,12 +3,19 @@ ler_xrs <- function(arquivo) {
     '. Copie a base real para Dados/. Nenhum resultado é fabricado.')
   nc <- ncdf4::nc_open(arquivo)
   on.exit(ncdf4::nc_close(nc))
+  avisos_metadados <- character()
+  ler_atributos <- function(v, a=NULL) {
+    texto <- capture.output(z <- if(is.null(a)) ncdf4::ncatt_get(nc,v) else ncdf4::ncatt_get(nc,v,a))
+    if(length(texto)) avisos_metadados <<- unique(c(avisos_metadados,texto))
+    z
+  }
   att <- function(v, a, default = NULL) {
-    z <- ncdf4::ncatt_get(nc, v, a)
+    z <- ler_atributos(v,a)
     if (isTRUE(z$hasatt)) z$value else default
   }
   for (v in c('xrsb_flux', 'xrsb_flag')) if (!v %in% names(nc$var)) stop('Variável ausente: ', v)
-  nomes <- unique(c(names(nc$var), names(nc$dim)))
+  dimensoes_coordenadas <- names(nc$dim)[vapply(nc$dim,function(d)isTRUE(d$create_dimvar),logical(1))]
+  nomes <- unique(c(names(nc$var), dimensoes_coordenadas))
   un <- lapply(nomes, function(v) att(v, 'units', ''))
   candidatas <- nomes[vapply(un, function(u) grepl(' since ', u, fixed = TRUE), logical(1))]
   if (length(candidatas) != 1L) stop('Coordenada temporal ausente ou ambígua.')
@@ -56,26 +63,45 @@ ler_xrs <- function(arquivo) {
     ano=as.integer(format(tempo,'%Y')), mes=format(tempo,'%Y-%m'),
     semana=format(tempo,'%G-W%V'), xrsb_flux=fluxo, xrsb_flag=flags)
   freq <- dados_xrs[, .N, by=xrsb_flag][order(xrsb_flag)]
-  freq[, significado := significados[match(xrsb_flag,valores)]]
+  if(length(mascaras) && length(mascaras)!=length(valores)) stop('Máscaras e valores de flags incompatíveis.')
+  decodificar <- function(v) {
+    if(is.na(v)) return(NA_character_)
+    if(!length(mascaras)) return(significados[match(v,valores)])
+    encontrados <- significados[bitwAnd(as.integer(v),as.integer(mascaras))==as.integer(valores)]
+    if(length(encontrados)>1L) encontrados <- setdiff(encontrados,'good_data')
+    if(length(encontrados)) paste(encontrados,collapse=' | ') else 'código não descrito nos metadados'
+  }
+  freq[, significado := vapply(xrsb_flag,decodificar,character(1))]
   freq[, percentual := 100*N/nrow(dados_xrs)]
   csv(freq, 'flags_antes_exclusao')
-  # Categorias de exclusão disjuntas, com prioridade explícita.
+  limites_fluxo <- c(att('xrsb_flux','valid_min',-Inf),att('xrsb_flux','valid_max',Inf))
+  if(anyNA(limites_fluxo) || limites_fluxo[1]>limites_fluxo[2]) stop('Faixa válida do fluxo inconsistente.')
+  # Seleção conservadora: código good_data puro; interpolados são excluídos mesmo
+  # quando a máscara good_data também é satisfeita. Categorias disjuntas.
   motivo <- fifelse(is.na(flags), 'flag ausente/não finita/fill',
             fifelse(flags != bom, 'flag diferente de good_data',
             fifelse(!is.finite(fluxo), 'fluxo ausente/não finito/fill',
-            fifelse(fluxo <= 0, 'fluxo não positivo', 'válida'))))
+            fifelse(fluxo <= 0, 'fluxo não positivo',
+            fifelse(fluxo<limites_fluxo[1] | fluxo>limites_fluxo[2], 'fluxo fora da faixa válida dos metadados', 'válida')))))
   exclusoes <- data.table(motivo)[,.N,by=motivo]; csv(exclusoes,'controle_qualidade')
   dados_limpos <- dados_xrs[motivo == 'válida']
   if (!nrow(dados_limpos)) stop('Nenhuma observação válida após controle de qualidade.')
   if (anyDuplicated(floor((as.numeric(tempo)+.001)/60))) stop('Mais de uma observação no mesmo minuto UTC.')
   meta_lista <- lapply(list(tv,'xrsb_flux','xrsb_flag',0), function(v) {
-    a <- ncdf4::ncatt_get(nc,v)
+    a <- ler_atributos(v)
     if (!length(a)) return(data.table(variavel=character(), atributo=character(), valor=character()))
     data.table(variavel=as.character(v), atributo=names(a), valor=vapply(a,paste,collapse=' | ',FUN.VALUE=character(1)))
   })
   metadados <- rbindlist(meta_lista); csv(metadados,'metadados_netcdf')
+  csv(data.table(aviso=avisos_metadados),'avisos_metadados')
+  validacao <- data.table(total=nrow(dados_xrs),validos=nrow(dados_limpos),
+    removidos=nrow(dados_xrs)-nrow(dados_limpos),percentual_valido=100*nrow(dados_limpos)/nrow(dados_xrs),
+    inicio=min(tempo),fim=max(tempo),unidade=unidade,cadencia_segundos=cadencia,
+    good_data=bom,codigos_encontrados=paste(freq$xrsb_flag,collapse=' | '))
+  csv(validacao,'validacao_base')
   list(dados_xrs=dados_xrs, dados_limpos=dados_limpos, flags=freq, exclusoes=exclusoes,
        metadados=metadados, unidade=unidade, temporal=tv, unidades_tempo=tu,
        origem=origem, good_data=bom, cadencia=cadencia, arquivo=arquivo,
-       md5=unname(tools::md5sum(arquivo)), mascaras=mascaras)
+       md5=unname(tools::md5sum(arquivo)), mascaras=mascaras, limites_fluxo=limites_fluxo,
+       validacao=validacao,avisos_metadados=avisos_metadados)
 }

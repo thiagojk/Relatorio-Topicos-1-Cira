@@ -10,3 +10,8 @@ relatorio.html
 .Rhistory
 .RData
 testes/ultimo_diretorio.txt
+
+/.quarto/
+
+# Proteção adicional: nenhuma base NetCDF deve ser versionada em outra pasta.
+*.nc

@@ -14,7 +14,7 @@ retornos_eventos <- function(base,ex,block,mod) {
     inicios<-sample.int(n,ceiling(n/L),replace=TRUE)
     ind<-as.vector(vapply(inicios,function(j)((j-1L+seq.int(0,L-1L))%%n)+1L,integer(L)))[seq_len(n)]
     xx<-y[ind];xx<-xx[is.finite(xx)]
-    fit<-ajustar_seguro(xx,erros=FALSE)
+    fit<-ajustar_seguro(xx,erros=FALSE,inicio=e)
     if(fit$ok) {
       be<-fit$fit$estimate
       valores_boot<-c(be*c(a$escala,a$escala,1),quantis(be,probs))
@@ -28,6 +28,11 @@ retornos_eventos <- function(base,ex,block,mod) {
     inferior=ic[1,4:7],superior=ic[2,4:7],unidade='W m^-2',
     prob_excedencia_por_bloco=1/(anos*por_ano),
     prob_excedencia_ano_indep=1-(1-1/(anos*por_ano))^por_ano)
+  retorno[,`:=`(razao_maximo_observado=estimativa/max(base$dados_limpos$xrsb_flux),
+    fora_faixa_metadados=estimativa>base$limites_fluxo[2])]
+  calibracao<-data.table(anos=anos,observadas=vapply(estimativa,function(z)sum(grid$maximo[grid$elegivel]>z),integer(1)),
+    esperadas_modelo=sum(grid$elegivel)/(anos*por_ano))
+  csv(calibracao,'calibracao_niveis_retorno')
   csv(retorno,'niveis_retorno');csv(as.data.table(boot),'bootstrap_blocos_moveis')
   parboot<-data.table(parametro=c('mu','sigma','xi'),inferior=ic[1,1:3],superior=ic[2,1:3])
   csv(parboot,'ic_parametros_bootstrap')
@@ -44,13 +49,13 @@ retornos_eventos <- function(base,ex,block,mod) {
   curva<-data.table(anos=tr,nivel=quantis(e,pp),inf=ci[1,],sup=ci[2,])
   xv<-sort(grid[elegivel == TRUE,maximo]);te<-1/(1-ppoints(length(xv)))/por_ano
   graf<-fig(ggplot(curva,aes(anos,nivel))+geom_ribbon(aes(ymin=inf,ymax=sup),fill=cor,alpha=.15)+
-    geom_line(color=cor)+geom_point(data=data.table(anos=te,nivel=xv)[anos<=10],size=1)+scale_x_log10()+
+    geom_line(color=cor)+geom_point(data=data.table(anos=te,nivel=xv)[anos<=10],size=1)+scale_x_log10()+scale_y_log10()+
     labs(title=paste('Níveis de retorno históricos — bloco',t),x='Período de retorno (anos, escala log10)',
-      y='Fluxo (W m⁻²)',caption='Faixa: IC percentil 95%, bootstrap de blocos móveis; pontos: máximos empíricos.'),'niveis_retorno')
+      y='Fluxo (W m⁻²), escala log10',caption='Faixa: IC percentil 95%, bootstrap de blocos móveis; pontos: máximos empíricos.'),'niveis_retorno')
   # Níveis condicionais no último bloco para a extensão não estacionária. IC delta (aproximação iid).
   condicional<-NULL
   if(mod$ns$ok && !is.null(mod$ns$fit$var.cov)) {
-    fn<-mod$ns$fit;en<-fn$estimate;ultimo<-max(grid$inicio)
+    fn<-mod$ns$fit;en<-fn$estimate;ultimo<-max(grid$inicio[grid$elegivel])
     tt<-as.numeric(ultimo-mod$centro_tempo)/365.2425
     fun<-function(v)evd::qgev(probs,loc=v['loc']+v['loctempo']*tt,scale=v['scale'],shape=v['shape'])*a$escala
     grad<-sapply(seq_along(en),function(j) {
@@ -58,8 +63,12 @@ retornos_eventos <- function(base,ex,block,mod) {
       (fun(vp)-fun(vm))/(2*h)
     })
     se<-sqrt(pmax(0,diag(grad%*%fn$var.cov%*%t(grad))))
-    condicional<-data.table(anos=anos,referencia=ultimo,estimativa=fun(en),inferior=fun(en)-1.96*se,
-      superior=fun(en)+1.96*se,metodo='Delta/Hessiana, aproximação de independência; covariável congelada')
+    qcond<-fun(en)
+    if(all(qcond>0)) {
+      li<-qcond*exp(-1.96*se/qcond);ls<-qcond*exp(1.96*se/qcond)
+      metodo<-'Delta no log-quantil/Hessiana; independência aproximada; covariável congelada'
+    } else {li<-qcond-1.96*se;ls<-qcond+1.96*se;metodo<-'Delta/Hessiana; quantil não positivo exige ressalva'}
+    condicional<-data.table(anos=anos,referencia=ultimo,estimativa=qcond,inferior=li,superior=ls,metodo=metodo)
     csv(condicional,'retornos_condicionais_nao_estacionarios')
   }
   d<-base$dados_limpos
@@ -74,7 +83,9 @@ retornos_eventos <- function(base,ex,block,mod) {
     dd[,grupo:=cumsum(c(TRUE,diff(as.numeric(data_hora))>h*3600))]
     ev<-dd[,.(inicio=min(data_hora),fim=max(data_hora),n_minutos=.N,
       data_pico=data_hora[which.max(xrsb_flux)],fluxo=max(xrsb_flux)),by=grupo]
-    eventos[[as.character(h)]]<-ev[order(-fluxo)]
+    ev<-ev[order(-fluxo)]
+    ev[,`:=`(posicao=.I,data=as.Date(data_pico,tz='UTC'),horario=format(data_pico,'%H:%M:%S',tz='UTC'))]
+    eventos[[as.character(h)]]<-ev
     sens[[as.character(h)]]<-data.table(janela_h=h,n_eventos=nrow(ev),limiar=ex$limiar_eventos)
     csv(ev[order(-fluxo)],paste0('eventos_',h,'h'))
   }
@@ -87,6 +98,6 @@ retornos_eventos <- function(base,ex,block,mod) {
     geom_text(data=ev[seq_len(min(.N,5L))],aes(x=as.Date(data_pico,tz='UTC'),y=fluxo,
       label=format(data_pico,'%Y-%m-%d')),vjust=-.6,size=3,check_overlap=TRUE)
   gp<-fig(gp,'eventos_extremos')
-  list(tabela=retorno,condicional=condicional,bootstrap=parboot,sucessos=sucesso,B=B,L=L,
+  list(tabela=retorno,calibracao=calibracao,condicional=condicional,bootstrap=parboot,sucessos=sucesso,B=B,L=L,
     classe=classe,picos=picos,eventos=ev,sensibilidade=sens,eventos_ano=porano,plots=list(retorno=graf,eventos=gp))
 }

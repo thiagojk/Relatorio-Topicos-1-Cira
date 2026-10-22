@@ -22,7 +22,8 @@ resumo <- list(arquivo=basename(config$arquivo),md5=base$md5,n_total=nrow(dados_
   n_validos=nrow(dados_limpos),inicio=min(dados_xrs$data_hora),fim=max(dados_xrs$data_hora),
   bloco=modelos$principal,parametros=modelos$parametros,ic_bootstrap=retornos$bootstrap,
   retornos=retornos$tabela,forma=retornos$classe,evidencia_ns=modelos$evidencia_ns,
-  p_lr=modelos$p_lr,config=config)
+  p_lr=modelos$p_lr,validacao=base$validacao,comparacao_blocos=modelos$comparacao,
+  comparacao_ns=modelos$comparacao_ns,calibracao=retornos$calibracao,config=config)
 saveRDS(resumo,'resultados/resumo.rds')
 capture.output(sessionInfo(),file='resultados/sessionInfo.txt')
 message('Análise concluída. Resultados em tabelas/, figuras/ e resultados/.')
