@@ -2,6 +2,26 @@
 
 Projeto em R e Quarto inspirado metodologicamente no trabalho de Carolyne Soares de Brito. A análise usa XRS-B, controles de qualidade do próprio NetCDF, máximos diários/semanais/mensais, GEV, extensão de localização linear no tempo, diagnósticos e níveis de retorno com bootstrap de blocos móveis.
 
+## Relatório no GitHub Pages
+
+A versão HTML completa da análise com dados reais está em `docs/index.html`, com gráficos, estilos e fórmulas incorporados. A publicação usa esses arquivos estáticos e não precisa baixar o NetCDF nem executar R no GitHub.
+
+Para ativar, abra [Settings → Pages](https://github.com/thiagojk/Relatorio-Topicos-1-Cira/settings/pages), selecione **Deploy from a branch**, escolha **main** e **/docs**, e clique em **Save**. Após a implantação, o endereço será:
+
+https://thiagojk.github.io/Relatorio-Topicos-1-Cira/
+
+Para atualizar a versão publicada após alterar a análise, com a base real instalada:
+
+```bash
+quarto render relatorio.qmd
+cp relatorio.html docs/index.html
+git add docs/index.html
+git commit -m "Atualiza relatório publicado"
+git push origin HEAD:main
+```
+
+O Pages publica novamente após o envio. A cópia em `docs/` representa a análise já renderizada; alterações apenas no código R ou no QMD não a atualizam automaticamente.
+
 ## Estado atual
 
 A análise foi executada com a **base real GOES-16**, disponível localmente em `Dados/`, e o relatório é gerado por Quarto. A validação e o registro dos resultados estão em `VALIDACAO.md`.
