@@ -15,3 +15,5 @@ pre { font-size: .78rem; } .sidebar nav { font-size: .85rem; }
 .quarto-float-tbl table caption { display: none; }
 table td { white-space: nowrap; }
 table th { white-space: normal; }
+
+#tbl-avisos td:last-child { white-space: normal; overflow-wrap: anywhere; }
