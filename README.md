@@ -5,6 +5,7 @@ Projeto em R e Quarto inspirado metodologicamente no trabalho de Carolyne Soares
 ## Versões do relatório
 
 - **HTML:** [leitura no GitHub Pages](https://thiagojk.github.io/Relatorio-Topicos-1-Cira/); arquivo local `relatorio.html`.
+- **Word:** [abrir ou baixar relatorio.docx](relatorio.docx), editável, com tabelas nativas e equações do Word.
 - **PDF:** [abrir ou baixar relatorio.pdf](relatorio.pdf), na raiz do repositório. Versão acadêmica A4 com capa, sumário, páginas numeradas e o mesmo conteúdo científico.
 
 ## Relatório no GitHub Pages
@@ -56,9 +57,10 @@ Rscript scripts/instalar_pacotes.R
 ```bash
 quarto render relatorio.qmd --to html
 quarto render relatorio.qmd --to pdf
+quarto render relatorio.qmd --to docx
 ```
 
-Os arquivos são gravados na raiz: `relatorio.html` e `relatorio.pdf`. O comando sem `--to` continua produzindo HTML por padrão.
+Os arquivos são gravados na raiz: `relatorio.html`, `relatorio.pdf` e `relatorio.docx`. O comando sem `--to` continua produzindo HTML por padrão.
 
 Abra `relatorio.html` no navegador. O HTML incorpora figuras e estilos; fórmulas usam MathML para evitar dependência de carregamento remoto. O suporte visual de MathML depende do navegador moderno.
 
@@ -85,6 +87,14 @@ Instale também as fontes **DejaVu Serif**, **DejaVu Sans**, **DejaVu Sans Mono*
 A configuração PDF está em `relatorio.qmd`; os arquivos de `formatos/` cuidam exclusivamente da impressão: capa, margens, tabelas com quebra de texto, cabeçalhos repetidos e reserva de espaço para tabelas curtas, quadro de advertência sem ícone e quebra de identificadores longos. Figuras mantêm os PNGs originais e suas proporções, em blocos independentes. Código permanece oculto. O HTML conserva seu tema e suas tabelas originais.
 
 O PDF final é versionado; `.tex`, `.aux`, `.log`, `.toc` e demais intermediários de `relatorio` são ignorados. Sempre regenere `relatorio.pdf` após uma mudança científica no QMD ou nos scripts. Atualizar somente HTML não atualiza automaticamente o PDF.
+
+### Versão Word
+
+A saída DOCX usa `formatos/referencia-word.docx` para página A4, margens, estilos, títulos e numeração; `formatos/word-tabelas.lua` distribui as larguras das colunas. Não exige LaTeX nem Microsoft Word para gerar. As fontes são Liberation Serif/Sans e Latin Modern Math; substituições de fonte e versões do editor podem mudar a paginação.
+
+Ao abrir no Word, atualize o sumário em **Referências → Atualizar Sumário → Atualizar o índice inteiro** (ou selecione tudo com Ctrl+A e pressione F9). O sumário é um campo automático, preenchido pelo editor.
+
+O modelo já acompanha o repositório. Para recriá-lo opcionalmente, use `python scripts/criar_referencia_word.py` com Quarto no PATH e o pacote Python `python-docx` instalado. O DOCX final é versionado; regenere-o após mudanças científicas. HTML e PDF continuam com suas próprias configurações.
 
 ## Organização
 

@@ -42,6 +42,15 @@ format:
     keep-tex: true
     include-in-header:
       - formatos/pdf-cabecalho.tex
+  docx:
+    reference-doc: formatos/referencia-word.docx
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    fig-cap-location: bottom
+    tbl-cap-location: top
+    filters:
+      - formatos/word-tabelas.lua
 execute:
   echo: false
   warning: true

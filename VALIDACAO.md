@@ -250,3 +250,13 @@ quarto render relatorio.qmd
 ```
 
 No RStudio, abra projeto.Rproj e use Render em relatorio.qmd. Ao clonar o GitHub, obtenha primeiro o arquivo original e coloque-o em Dados/. Este documento registra a validação desta base e execução; o QMD recalcula os valores dinamicamente em novas renderizações. A saída PDF também foi validada com a base real; veja a seção de validação PDF neste documento.
+
+## Versão Word — 23/10/2026
+
+Renderização `quarto render relatorio.qmd --to docx` concluída com Quarto 1.7.32 e a base real. Arquivo `relatorio.docx`: 3.571.946 bytes. O modelo A4 tem margens de 24 mm, estilos de títulos, numeração de páginas e campo de sumário automático (atualizar no Word ao abrir). A configuração DOCX é independente das saídas HTML e PDF.
+
+Auditoria OOXML confirmou as 42 figuras científicas originais incorporadas sem alteração de bytes, além do ícone de advertência; 49 expressões matemáticas nativas editáveis; e todos os 436 valores numéricos distintos das 37 tabelas científicas iguais aos do HTML publicado. Tabelas e texto são editáveis, não capturas de tela. O arquivo contém também tabelas estruturais criadas pelo Quarto para legendas, figuras e o aviso.
+
+Conversão de inspeção pelo LibreOfficeDev 26.8 produziu 43 páginas A4. Foram rasterizadas todas as páginas, verificadas as posições dos elementos e inspecionadas visualmente capa, tabelas, gráficos, fórmulas e conclusão. Não houve conteúdo fora da página; a paginação poderá variar no Microsoft Word, que não foi executado neste ambiente. O sumário depende da atualização de campos pelo editor e não está preenchido na prévia do LibreOffice. A prévia PDF foi criada apenas em `/tmp`, sem substituir o PDF acadêmico existente.
+
+Hashes SHA256 antes/depois confirmaram preservação byte a byte de `relatorio.pdf`, `docs/index.html`, todos os scripts científicos em `R/`, CSVs e PNGs. O pipeline foi executado pela renderização; não houve alteração de métodos nem de resultados. Não foi necessário repetir testes estatísticos para esta mudança exclusivamente de formato. O NetCDF continua fora do Git.
