@@ -103,6 +103,44 @@ e<-modelos$modelos$mensal$fit$estimate
 s<-modelos$modelos$mensal$escala
 p<-1-1/(12*retornos$tabela$anos)
 stopifnot(max(abs(evd::pgev(retornos$tabela$estimativa/s,loc=e['loc'],scale=e['scale'],shape=e['shape'])-p))<1e-8)
+# Skew-t: contrato da mesma amostra e fórmulas na unidade física original.
+am<-skew_t$amostra_comum
+stopifnot(identical(am$inicio,block$blocos$mensal[elegivel==TRUE,inicio]),
+  identical(am$maximo,block$blocos$mensal[elegivel==TRUE,maximo]),
+  nrow(am)==modelos$modelos$mensal$fit$n,
+  all(skew_t$criterios$n==nrow(am)),
+  all(complete.cases(skew_t$diagnosticos)),
+  all(is.finite(skew_t$diagnosticos$teorico)),
+  all(skew_t$diagnosticos$pit>=0 & skew_t$diagnosticos$pit<=1),
+  skew_t$ajuste$dp['omega']>0,skew_t$ajuste$dp['nu']>0,
+  skew_t$ajuste$convergiu,
+  all(abs(skew_t$criterios$AIC-(-2*skew_t$criterios$logLik+2*skew_t$criterios$k))<1e-8),
+  all(abs(skew_t$criterios$BIC-(-2*skew_t$criterios$logLik+log(nrow(am))*skew_t$criterios$k))<1e-8))
+dp<-skew_t$ajuste$dp
+prob<-c(.1,.5,.9,.99)
+q<-sn::qst(prob,dp=dp)
+stopifnot(all(is.finite(q)),all(diff(q)>0),
+  max(abs(sn::pst(q,dp=dp)-prob))<2e-6,
+  all(sn::dst(am$maximo/s,dp=dp)>0),
+  abs(sum(sn::dst(am$maximo,dp=dp*c(s,s,1,1),log=TRUE))-skew_t$ajuste$logLik)<1e-5)
+# Caso conhecido alpha=0: Student t simétrica, densidade normalizada e quantis exatos.
+z<-seq(-5,5,length.out=51)
+stopifnot(max(abs(sn::dst(z,dp=c(0,1,0,5))-dt(z,df=5)))<1e-10,
+  max(abs(sn::qst(prob,dp=c(0,1,0,5))-qt(prob,df=5)))<1e-6,
+  abs(integrate(function(t)sn::dst(t,dp=c(0,1,3,5)),-Inf,Inf)$value-1)<1e-6)
+# Divergência da amostra GEV deve interromper, não ser corrigida silenciosamente.
+err<-tryCatch(amostra_mensal_comum(block,within(modelos,principal<-'diario')),error=identity)
+stopifnot(inherits(err,'error'))
+mod_errado<-modelos
+mod_errado$modelos$mensal$fit$data[1]<-mod_errado$modelos$mensal$fit$data[1]+1
+err<-tryCatch(amostra_mensal_comum(block,mod_errado),error=identity)
+stopifnot(inherits(err,'error'))
+# Cenários com exclusões têm o mesmo n para as duas famílias, sem mudar o principal.
+stopifnot(all(skew_t$sensibilidade[,uniqueN(n),by=cenario]$V1==1L),
+  identical(skew_t$sens_diagnosticos$n,c(nrow(am),nrow(am)-1L,nrow(am)-3L)),
+  all(is.finite(skew_t$sensibilidade$logLik)))
+# Exercita identificação de fronteira: a amostra real não entra no teste artificial.
+if(skew_t$ajuste$fronteira)stopifnot(!skew_t$ajuste$regular,all(is.na(skew_t$ajuste$parametros$ep)))
 cat('\nTESTES TÉCNICOS PASSARAM. Dados ARTIFICIAIS, sem interpretação solar.\n')
 cat('DIRETORIO_TESTE=',local_teste,'\n',sep='')
 writeLines(local_teste,file.path(raiz,'testes/ultimo_diretorio.txt'))

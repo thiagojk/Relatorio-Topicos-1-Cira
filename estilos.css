@@ -17,3 +17,6 @@ table td { white-space: nowrap; }
 table th { white-space: normal; }
 
 #tbl-avisos td:last-child { white-space: normal; overflow-wrap: anywhere; }
+
+/* Textos longos dos registros numéricos devem caber na página. */
+#tbl-otimizacao-mensagens td { white-space: normal; overflow-wrap: anywhere; }

@@ -1,6 +1,6 @@
 # Validação da análise com a base real GOES-16
 
-Validação realizada em 22 de outubro de 2026. Este registro descreve os resultados efetivamente executados com o arquivo real; a validação técnica artificial é separada.
+Validação original em 22 de outubro de 2026; comparação Skew-t executada em 23 de outubro de 2026. Este registro descreve os resultados efetivamente executados com o arquivo real; a validação técnica artificial é separada.
 
 ## Base utilizada
 
@@ -23,8 +23,8 @@ Validação realizada em 22 de outubro de 2026. Este registro descreve os result
 - `Rscript R/executar.R`: concluído com a base real, status 0.
 - `Rscript testes/testar.R`: aprovado, status 0. Os testes artificiais ficam em pasta temporária e não alimentam o relatório real. Incluem código good_data não zero, máscaras compostas, dimensão sem coordenada, faixa válida e regressão da comparação aninhada.
 - `quarto render relatorio.qmd`: concluído com a base real, status 0.
-- HTML: `/workspace/Relatorio-Topicos-1-Cira/relatorio.html` (5767095 bytes).
-- Chromium: 37 imagens incorporadas, 25 tabelas, 21 elementos MathML; nenhuma imagem quebrada, erro JavaScript ou tabela larga em viewport de 1440 px. Acesso externo foi bloqueado durante a inspeção.
+- HTML da versão GEV original: 5767095 bytes; a versão ampliada está registrada na validação Skew-t abaixo.
+- Chromium da versão GEV original: 37 imagens incorporadas, 25 tabelas, 21 elementos MathML; nenhuma imagem quebrada, erro JavaScript ou tabela larga em viewport de 1440 px. Acesso externo foi bloqueado durante a inspeção.
 - As 37 figuras foram inspecionadas visualmente em painéis, e título, tabelas de parâmetros, níveis de retorno e principais figuras foram também conferidos no HTML.
 - Valores renderizados das tabelas de parâmetros e retornos foram confrontados com os CSVs, respeitando o arredondamento de apresentação. O MD5 da base aparece no HTML e coincide com o RDS.
 - R 4.5.0; Quarto 1.7.32; versões dos pacotes em `referencias/pacotes_validados.tsv` e `resultados/sessionInfo.txt`.
@@ -87,9 +87,114 @@ O nível formal de um ano não foi excedido, embora a distribuição constante e
 - Incerteza da extensão linear: IC delta no log-quantil quando positivo, sem truncar limites negativos arbitrariamente.
 - A renderização final não registrou warnings não tratados. Os avisos científicos xi >= 1 e as limitações de calibração estão explicitamente expostos no relatório.
 
+## Acréscimo Skew-t — execução real de 23/10/2026
+
+### Preservação e amostra
+
+Antes da edição foram lidos README, este registro, QMD e os módulos R. A amostra é `block$blocos$mensal[elegivel == TRUE]`, a mesma armazenada reescalonada em `modelos$modelos$mensal$fit$data`. `amostra_mensal_comum()` compara quantidade, valores na ordem original e datas, além de finitude, positividade e ausência de duplicação. O objeto explícito é `skew_t$amostra_comum`.
+
+| n | primeiro | ultimo | minimo | mediana | maximo | invalidos |
+|---|---|---|---|---|---|---|
+| 94 | 2017-03-01 | 2025-03-01 | 4.1009429e-08 | 1.8975044e-05 | 0.0014640847 | 0 |
+
+A nova execução completa foi confrontada com o RDS anterior: todos os componentes previamente existentes, incluindo parâmetros GEV, bootstrap, retornos, calibração, comparação de blocos e extensão linear, foram preservados integralmente (`all.equal` em cada componente). O CSV dos parâmetros GEV também é idêntico byte a byte. Nenhum extremo foi removido do ajuste principal.
+
+### Implementação e otimização
+
+- Pacote `sn` 2.1.1; Skew-t univariada de Azzalini–Capitanio, parametrização direta DP `(xi, omega, alpha, nu)`.
+- Localização xi_ST não é a forma xi_GEV; omega é escala, não desvio padrão; alpha é slant, não coeficiente de assimetria; nu são graus de liberdade.
+- `sn::st.mple(penalty=NULL)`: sem penalização, 8 conjuntos iniciais e dois métodos (nlminb e Nelder–Mead), 16 tentativas por cenário. Densidade/CDF/quantis: `sn::dst/pst/qst`, sem implementação manual.
+- Reescalonamento linear pela mesma mediana da GEV, sem log-transformar resposta, truncamento em zero ou limite arbitrário para alpha. A soma das log-densidades é conferida independentemente em W/m², com correção `-n*log(s)`.
+- A solução selecionada termina numericamente, mas `sn` sinaliza fronteira: alpha diverge sem estimativa finita identificável. Não é um MLE interior regular validado. Não se publicam EP/IC Wald; traços/NA são informativos, não erros zero.
+- Nu < 1 implica média indefinida no modelo ajustado; não se atribui essa propriedade à emissão solar.
+- `otimizacao_skew_t.csv` registra inícios, métodos, códigos, mensagens e avisos de todas as tentativas e cenários. As mensagens e falhas de convergência também aparecem no relatório. Não se apagam warnings para apresentar estabilidade fictícia.
+
+| parametro | estimativa | ep | inferior | superior | unidade |
+|---|---|---|---|---|---|
+| xi_ST (localização) | 4.1009428e-08 | — | — | — | W m^-2 |
+| omega (escala) | 2.1814254e-06 | — | — | — | W m^-2 |
+| alpha (slant) | 6.0071775e+14 | — | — | — | adimensional |
+| nu (graus de liberdade) | 0.30886067 | — | — | — | adimensional |
+
+O valor numérico enorme de alpha pode variar entre execuções/ambientes com pouca variação da verossimilhança: os dígitos não representam precisão inferencial. A fronteira é o resultado relevante. A Hessiana só produziria EP/IC numa solução interior, positiva definida e bem condicionada, com gradiente pequeno; a dependência ainda tornaria tais intervalos nominais.
+
+### Comparação na unidade original W/m²
+
+| modelo | n | k | logLik | AIC | BIC |
+|---|---|---|---|---|---|
+| GEV | 94 | 3 | 826.12354 | -1646.2471 | -1638.6172 |
+| Skew-t | 94 | 4 | 816.67238 | -1625.3448 | -1615.1716 |
+
+Os números absolutos diferem do AIC de estacionariedade registrado acima porque aquela comparação usa os fluxos numericamente reescalonados. Não houve mudança de ajuste GEV: aqui ambos os modelos incluem o mesmo Jacobiano para W/m². Critérios Skew-t são nominais na fronteira; dependência e heterogeneidade limitam a interpretação clássica para ambas as famílias. Não se usa LRT entre GEV e Skew-t.
+
+| modelo | rmse_pp | erro_log_cauda | quantil_maior_ponto |
+|---|---|---|---|
+| GEV | 0.075865653 | 1.7567828 | 5.9179623 |
+| Skew-t | 0.097114462 | 1.8117653 | 15.515886 |
+
+Menor é melhor para RMSE PP e erro médio absoluto log10(teórico/observado), nos pontos QQ com p >= 0,90. A GEV é relativamente menos discrepante; ambas excedem drasticamente os maiores valores. As curvas de densidade visualizadas em log10 usam o Jacobiano correto `x*log(10)`. Não se interpreta o aparente ajuste central como validação dos extremos.
+
+### Quantis da cauda e equivalentes
+
+| probabilidade | n_esperado_acima | empirico | GEV | Skew_t | erro_rel_GEV | erro_rel_Skew_t |
+|---|---|---|---|---|---|---|
+| 0.9 | 9.4 | 0.00021901725 | 0.0015155639 | 0.0011626358 | 5.919838 | 4.3084214 |
+| 0.95 | 4.7 | 0.00037364204 | 0.011146563 | 0.010966716 | 28.832198 | 28.350862 |
+| 0.975 | 2.35 | 0.0007472419 | 0.078909127 | 0.10344791 | 104.60051 | 137.43966 |
+| 0.99 | 0.94 | 0.00093421097 | 1.0218203 | 2.0097086 | 1092.779 | 2150.2364 |
+
+Quantis empíricos usam interpolação tipo 7. Erros relativos são frações, não porcentagens. P95 já tem menos de 5 observações esperadas acima; P99 tem menos de uma. São diagnósticos exploratórios, com grande incerteza e informação efetiva menor sob dependência. A Skew-t aproxima relativamente melhor P90/P95, mas piora P97,5/P99 e o erro agregado do QQ superior.
+
+| anos | probabilidade | GEV | Skew_t | razao_Skew_t_maximo |
+|---|---|---|---|---|
+| 1 | 0.91666667 | 0.0025759025 | 0.0020979854 | 1.4329672 |
+| 2 | 0.95833333 | 0.018700191 | 0.019789802 | 13.516842 |
+| 5 | 0.98333333 | 0.24567146 | 0.3844619 | 262.59539 |
+| 10 | 0.99166667 | 1.6977544 | 3.6265962 | 2477.0398 |
+
+São **quantis equivalentes da Skew-t**, não níveis de retorno TVE validados. Não substituem os níveis GEV e seus IC. As extrapolações de ambas as famílias são excessivas; a Skew-t não recebe intervalos artificiais de precisão numa solução de fronteira.
+
+### Influência dos maiores máximos
+
+| cenario | modelo | n | localizacao | escala | xi_GEV | alpha_ST | nu_ST | logLik | AIC | BIC |
+|---|---|---|---|---|---|---|---|---|---|---|
+| completa | GEV | 94 | 2.9785681e-06 | 8.2079783e-06 | 2.771987 | — | — | 826.12354 | -1646.2471 | -1638.6172 |
+| completa | Skew-t | 94 | 4.1009428e-08 | 2.1814254e-06 | — | 6.0071775e+14 | 0.30886067 | 816.67238 | -1625.3448 | -1615.1716 |
+| sem_1_maior | GEV | 93 | 2.8755738e-06 | 7.8462533e-06 | 2.7446907 | — | — | 822.97181 | -1639.9436 | -1632.3458 |
+| sem_1_maior | Skew-t | 93 | 4.1009428e-08 | 2.1786356e-06 | — | 3.2687844e+14 | 0.31418332 | 813.70489 | -1619.4098 | -1609.2794 |
+| sem_3_maiores | GEV | 91 | 2.6847053e-06 | 7.1995205e-06 | 2.6977256 | — | — | 815.38397 | -1624.7679 | -1617.2354 |
+| sem_3_maiores | Skew-t | 91 | 4.1009428e-08 | 2.1471002e-06 | — | 1.1068877e+15 | 0.32327913 | 806.49289 | -1604.9858 | -1594.9424 |
+
+| cenario | delta_AIC | delta_BIC | rmse_pp_GEV | rmse_pp_ST | P99_GEV | P99_ST |
+|---|---|---|---|---|---|---|
+| completa | 20.902337 | 23.445632 | 0.075865653 | 0.097114462 | 1.0218203 | 2.0097086 |
+| sem_1_maior | 20.533837 | 23.066436 | 0.076946695 | 0.09767407 | 0.8700922 | 1.5747933 |
+| sem_3_maiores | 19.782141 | 22.293001 | 0.078485352 | 0.098331251 | 0.65444703 | 1.0448669 |
+
+Diferenças são Skew-t menos GEV, sempre dentro da mesma amostra do cenário. A preferência dos critérios pela GEV persiste sem um e sem três maiores. Nu varia e a escala das extrapolações muda, mas alpha permanece na fronteira e os problemas de cauda não desaparecem. Não se compara AIC absoluto entre cenários com n diferente nem se excluem dados do ajuste principal por esse motivo.
+
+### Conclusão empírica
+
+**A Skew-t apresentou evidência de ajuste empírico melhor que a GEV para os máximos mensais? Não.** AIC/BIC nominais e PP favorecem a GEV; a Skew-t melhora alguns quantis menos extremos, mas piora a cauda mais alta e tem assimetria não identificável como parâmetro finito. A GEV também falha na calibração superior. Nenhuma família global investigada autoriza previsão segura; dependência, mistura de fases solares, n mensal pequeno e incerteza estrutural permanecem.
+
+A referência Azzalini e Capitanio (2003) e a citação de `sn` foram verificadas na documentação instalada (`help("st.mple", package="sn")` e `citation("sn")`), sem inventar bibliografia. O relatório reproduz a citação do pacote e registra versões.
+
+### Testes e renderização da extensão
+
+- `Rscript testes/testar.R`: aprovado, status 0; fixture somente em `/tmp/goes_TESTE_ARTIFICIAL_*`.
+- Novos testes: identidade da amostra e rejeição de divergência, ajuste e parâmetros válidos, densidade normalizada/caso Student simétrico conhecido, inversão CDF/quantil, fórmulas AIC/BIC, Jacobiano, diagnósticos finitos, cenários comuns e incerteza indisponível em fronteira. Testes anteriores preservados.
+- `Rscript R/executar.R`: concluído, status 0, base real original.
+- `quarto render relatorio.qmd`: concluído, status 0, base real; recalcula integralmente, sem reutilizar resultados artificiais.
+- `bash scripts/preparar_nuvem.sh`: concluído, status 0; instaladores incluem sn e numDeriv.
+
+- Chromium da versão ampliada: 42 imagens incorporadas, 37 tabelas e 49 elementos MathML; zero imagens quebradas/externas, erros JavaScript ou tabelas largas no viewport de 1440 px.
+- As cinco novas figuras foram inspecionadas visualmente, assim como capturas do HTML nas seções de critérios e sensibilidade. As cinco tabelas de parâmetros Skew-t, critérios, cauda, sensibilidade dos critérios e quantis equivalentes foram conferidas numericamente contra os CSVs, com tolerância de arredondamento.
+- Nenhum placeholder nem resultado artificial no HTML. O MD5 da base confere; os logs da execução/renderização não apresentam warnings não tratados. As falhas de convergência e a não regularidade científica são expostas nas tabelas/texto, não ocultadas.
+- HTML ampliado: 6339913 bytes; SHA256 `dbb0c10e7a238d086e59732262b62113130b77673bbf81fc582c692876861f5d`. `docs/index.html` recebe cópia idêntica para preservar a estrutura Pages existente.
+
 ## Git e reprodução
 
-O NetCDF não é versionado. HTML, figuras, CSVs, RDS e arquivos temporários de renderização também permanecem ignorados quando são produtos reproduzíveis. O projeto em ZIP disponibilizado separadamente inclui os resultados, sem a base de 241 MiB.
+O NetCDF não é versionado. `relatorio.html`, figuras, CSVs, RDS e arquivos temporários permanecem ignorados. A cópia autocontida em `docs/index.html` é versionada para o GitHub Pages. O projeto em ZIP disponibilizado separadamente inclui os resultados, sem a base de 241 MiB.
 
 ```bash
 export PATH=/workspace/.tools/bin:$PATH

@@ -1,6 +1,6 @@
 # Valores extremos do fluxo solar GOES-16
 
-Projeto em R e Quarto inspirado metodologicamente no trabalho de Carolyne Soares de Brito. A análise usa XRS-B, controles de qualidade do próprio NetCDF, máximos diários/semanais/mensais, GEV, extensão de localização linear no tempo, diagnósticos e níveis de retorno com bootstrap de blocos móveis.
+Projeto em R e Quarto inspirado metodologicamente no trabalho de Carolyne Soares de Brito. A análise usa XRS-B, controles de qualidade do próprio NetCDF, máximos diários/semanais/mensais, GEV, extensão de localização linear no tempo, diagnósticos e níveis de retorno com bootstrap de blocos móveis. Compara também a GEV com a Skew-t de Azzalini–Capitanio (`sn`), usando exatamente os mesmos máximos mensais elegíveis.
 
 ## Relatório no GitHub Pages
 
@@ -34,7 +34,7 @@ O NetCDF de 252.483.840 bytes permanece ignorado pelo Git. A cópia fornecida pe
 2b5dded7d1a6e1f55cffb4d049664dfd52b4082245ae7d8abe05bbff63a3daa0
 ```
 
-O HTML é autocontido e está em `relatorio.html` após a execução. HTML, figuras, tabelas e RDS são produtos reproduzíveis ignorados pelo Git; o relatório real também é disponibilizado como artefato separado da entrega.
+O HTML é autocontido e está em `relatorio.html` após a execução. `relatorio.html`, figuras, tabelas e RDS são produtos reproduzíveis ignorados pelo Git. A cópia estática `docs/index.html` é versionada para o GitHub Pages; atualize-a após renderizar.
 
 ## Gerar o relatório
 
@@ -75,6 +75,7 @@ PDF é opcional: `quarto render relatorio.qmd --to pdf`, após instalar uma dist
 - `R/04_block_maxima.R`: grades de calendário, cobertura e elegibilidade dos máximos.
 - `R/05_gev.R`: múltiplos inícios de otimização, comparação de blocos e extensão temporal.
 - `R/06_niveis_retorno.R`: IC por bootstrap móvel, níveis de retorno e episódios separados.
+- `R/07_skew_t.R`: validação da amostra comum, estimação Skew-t, múltiplos inícios, comparação GEV × Skew-t, diagnósticos e influência dos maiores máximos.
 - `R/executar.R`: execução integral compartilhada com o relatório.
 - `figuras/`, `tabelas/`, `resultados/`: saídas geradas, ignoradas no Git.
 - `referencias/Carolyne.pdf`: referência fornecida, sem reprodução literal de seu texto.
@@ -105,6 +106,24 @@ Para executar só a análise: `Rscript R/executar.R`. Resultados resumidos ficam
 - Declustering: excedências do P99,9 global, regra de intervalo entre excedências, 6 h como principal, 1/24 h para sensibilidade. Não constitui identificação física de flares.
 - Níveis históricos estacionários de 1, 2, 5 e 10 anos são resumos condicionais às hipóteses. Sob mudança temporal, não são previsões. Quantis da extensão mantêm a covariável congelada e recebem ressalvas explícitas.
 - Não se conclui independência com p > 0,05, nem cauda Fréchet apenas pelo sinal de xi ou desvio de normalidade.
+
+## Comparação GEV × Skew-t
+
+A comparação principal preserva os 94 máximos mensais elegíveis da GEV: asserções conferem quantidade, datas, valores e positividade contra os dados efetivamente usados no ajuste original. A Skew-t usa a parametrização direta de `sn`: localização xi_ST, escala omega, slant alpha e graus de liberdade nu. Localização/escala não são média/desvio padrão; xi_ST não é a forma da GEV. A estimação usa `st.mple(penalty=NULL)` com oito inícios e dois métodos, sem truncar em zero ou transformar a resposta em log.
+
+**Resultado real:** a Skew-t não melhorou conjuntamente o ajuste. A GEV teve menor AIC/BIC nominal, menor discrepância PP e menor erro dos quantis mais altos do QQ. A Skew-t atingiu uma fronteira de assimetria extrema, sem alpha finito estável; por isso não são publicados EP/IC Wald para essa solução. Ambas extrapolam excessivamente a cauda. As exclusões apenas diagnósticas de um/três maiores máximos não inverteram a preferência dos critérios pela GEV; não justificam retirar dados do principal. Valores completos e verificações estão em `VALIDACAO.md` e no relatório.
+
+As log-verossimilhanças comparativas são expressas na mesma escala W/m², com Jacobiano do reescalonamento numérico. AIC/BIC são nominais diante da dependência mensal, heterogeneidade temporal e solução Skew-t não regular. Não se usa LRT entre as famílias, nem se atribui à Skew-t a justificativa assintótica da GEV. Quantis equivalentes da Skew-t não substituem níveis de retorno GEV e não são previsões validadas.
+
+Novas saídas reproduzíveis:
+
+- `tabelas/amostra_comum_mensal.csv`: datas, máximos e cobertura da amostra compartilhada.
+- `tabelas/parametros_skew_t.csv`, `comparacao_gev_skew_t.csv`, `quantis_cauda_gev_skew_t.csv`: parâmetros, critérios e cauda.
+- `tabelas/otimizacao_skew_t.csv`: todos os inícios, métodos, códigos, mensagens e avisos nos três cenários.
+- `tabelas/sensibilidade_gev_skew_t.csv`, `diagnosticos_sensibilidade_skew_t.csv`: influência dos maiores eventos.
+- `tabelas/diagnosticos_gev_skew_t.csv`: valores ponto a ponto dos QQ/PP, sem NA.
+- `resultados/comparacao_skew_t.rds`: objetos numéricos e conclusão gerada a partir dos resultados.
+- `figuras/comparacao_*.png`: densidade visualizada em log10 com Jacobiano, QQ separados em limites comuns, PP e cauda superior.
 
 ## Testes técnicos
 
