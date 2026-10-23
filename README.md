@@ -2,6 +2,11 @@
 
 Projeto em R e Quarto inspirado metodologicamente no trabalho de Carolyne Soares de Brito. A análise usa XRS-B, controles de qualidade do próprio NetCDF, máximos diários/semanais/mensais, GEV, extensão de localização linear no tempo, diagnósticos e níveis de retorno com bootstrap de blocos móveis. Compara também a GEV com a Skew-t de Azzalini–Capitanio (`sn`), usando exatamente os mesmos máximos mensais elegíveis.
 
+## Versões do relatório
+
+- **HTML:** [leitura no GitHub Pages](https://thiagojk.github.io/Relatorio-Topicos-1-Cira/); arquivo local `relatorio.html`.
+- **PDF:** [abrir ou baixar relatorio.pdf](relatorio.pdf), na raiz do repositório. Versão acadêmica A4 com capa, sumário, páginas numeradas e o mesmo conteúdo científico.
+
 ## Relatório no GitHub Pages
 
 A versão HTML completa da análise com dados reais está em `docs/index.html`, com gráficos, estilos e fórmulas incorporados. A publicação usa esses arquivos estáticos e não precisa baixar o NetCDF nem executar R no GitHub.
@@ -46,11 +51,14 @@ O HTML é autocontido e está em `relatorio.html` após a execução. `relatorio
 Rscript scripts/instalar_pacotes.R
 ```
 
-4. Gere o relatório:
+4. Gere o formato desejado:
 
 ```bash
-quarto render relatorio.qmd
+quarto render relatorio.qmd --to html
+quarto render relatorio.qmd --to pdf
 ```
+
+Os arquivos são gravados na raiz: `relatorio.html` e `relatorio.pdf`. O comando sem `--to` continua produzindo HTML por padrão.
 
 Abra `relatorio.html` no navegador. O HTML incorpora figuras e estilos; fórmulas usam MathML para evitar dependência de carregamento remoto. O suporte visual de MathML depende do navegador moderno.
 
@@ -64,7 +72,19 @@ Para refazer a instalação local desta máquina Debian sem privilégios de admi
 
 No **RStudio**, abra `projeto.Rproj`, execute `source('scripts/instalar_pacotes.R')` uma vez, abra `relatorio.qmd` e clique em **Render**. O HTML pode ser aberto pelo painel Viewer ou no navegador. Não é necessário um servidor.
 
-PDF é opcional: `quarto render relatorio.qmd --to pdf`, após instalar uma distribuição LaTeX com os recursos de português. A exportação PDF não é requisito nem foi validada nesta entrega.
+### Dependências e apresentação do PDF
+
+O PDF usa **XeLaTeX**. Nesta máquina já existe TeX Live 2025/Debian; não foi necessário substituir a instalação. Se não houver uma distribuição LaTeX no seu computador, uma alternativa é:
+
+```bash
+quarto install tinytex
+```
+
+Instale também as fontes **DejaVu Serif**, **DejaVu Sans**, **DejaVu Sans Mono** e **Latin Modern Math**, usadas na configuração. Os pacotes LaTeX de apresentação incluem `tcolorbox`, `fvextra`, `seqsplit`, `needspace`, `placeins`, `microtype`, `longtable` e `booktabs`; com TinyTeX, o Quarto pode instalar dependências faltantes conforme o acesso à rede.
+
+A configuração PDF está em `relatorio.qmd`; os arquivos de `formatos/` cuidam exclusivamente da impressão: capa, margens, tabelas com quebra de texto, cabeçalhos repetidos e reserva de espaço para tabelas curtas, quadro de advertência sem ícone e quebra de identificadores longos. Figuras mantêm os PNGs originais e suas proporções, em blocos independentes. Código permanece oculto. O HTML conserva seu tema e suas tabelas originais.
+
+O PDF final é versionado; `.tex`, `.aux`, `.log`, `.toc` e demais intermediários de `relatorio` são ignorados. Sempre regenere `relatorio.pdf` após uma mudança científica no QMD ou nos scripts. Atualizar somente HTML não atualiza automaticamente o PDF.
 
 ## Organização
 

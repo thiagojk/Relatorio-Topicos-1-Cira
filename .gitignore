@@ -15,3 +15,17 @@ testes/ultimo_diretorio.txt
 
 # Proteção adicional: nenhuma base NetCDF deve ser versionada em outra pasta.
 *.nc
+
+# Intermediários da versão PDF; somente relatorio.pdf será versionado.
+/relatorio.tex
+/relatorio.aux
+/relatorio.log
+/relatorio.out
+/relatorio.toc
+/relatorio.lof
+/relatorio.lot
+/relatorio.fls
+/relatorio.fdb_latexmk
+/relatorio.synctex.gz
+/relatorio.knit.md
+/relatorio.utf8.md

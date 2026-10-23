@@ -1,0 +1,42 @@
+% Somente apresentação PDF: sem interferência nos cálculos ou no HTML.
+\usepackage[skins,breakable]{tcolorbox}
+\usepackage{needspace}
+\usepackage{seqsplit}
+\usepackage{fvextra}
+\DefineVerbatimEnvironment{verbatim}{Verbatim}{fontsize=\small,breaklines=true,breakanywhere=true}
+\usepackage{microtype}
+\usepackage{placeins}
+\usepackage{etoolbox}
+\usepackage{caption}
+\captionsetup{font=small,labelfont=bf,justification=raggedright,singlelinecheck=false}
+\setlength{\emergencystretch}{3em}
+\setlength{\LTpre}{.7\baselineskip}
+\setlength{\LTpost}{.7\baselineskip}
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.15}
+\pretocmd{\tableofcontents}{\renewcommand{\contentsname}{Sumário}}{}{}
+\pagestyle{plain}
+\RedeclareSectionCommand[tocnumwidth=2.4em]{section}
+\RedeclareSectionCommand[tocindent=2.4em,tocnumwidth=3em]{subsection}
+% Quebras permitidas em nomes de objetos/arquivos extensos.
+\let\TextoMonoespacadoOriginal\texttt
+\renewcommand{\texttt}[1]{\TextoMonoespacadoOriginal{\seqsplit{#1}}}
+% Evita títulos isolados e impede figuras de atravessarem seções principais.
+\pretocmd{\section}{\FloatBarrier\Needspace{5\baselineskip}}{}{}
+\pretocmd{\subsection}{\Needspace{4\baselineskip}}{}{}
+% Capa com os metadados existentes; nenhuma afiliação ou autoria é inventada.
+\makeatletter
+\renewcommand{\maketitle}{%
+  \begin{titlepage}
+  \centering
+  \vspace*{32mm}
+  {\sffamily\bfseries\LARGE\@title\par}
+  \vspace{12mm}
+  {\sffamily\large\@subtitle\par}
+  \vfill
+  {\large\@date\par}
+  \vspace*{15mm}
+  \end{titlepage}
+}
+\makeatother
+\apptocmd{\tableofcontents}{\clearpage}{}{}

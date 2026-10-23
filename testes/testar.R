@@ -4,7 +4,7 @@ raiz <- normalizePath('.')
 stopifnot(file.exists('relatorio.qmd'))
 local_teste <- tempfile('goes_TESTE_ARTIFICIAL_',tmpdir='/tmp')
 dir.create(local_teste)
-for(p in c('R','relatorio.qmd','estilos.css','tema.scss','_quarto.yml')) {
+for(p in c('R','formatos','relatorio.qmd','estilos.css','tema.scss','_quarto.yml')) {
   stopifnot(file.copy(file.path(raiz,p),local_teste,recursive=TRUE))
 }
 setwd(local_teste)

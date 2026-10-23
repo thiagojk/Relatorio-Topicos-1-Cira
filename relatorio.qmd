@@ -17,6 +17,31 @@ format:
     fig-cap-location: bottom
     tbl-cap-location: top
     link-external-newwindow: true
+  pdf:
+    pdf-engine: xelatex
+    documentclass: scrartcl
+    papersize: a4
+    geometry:
+      - margin=24mm
+    fontsize: 11pt
+    linestretch: 1.12
+    mainfont: DejaVu Serif
+    sansfont: DejaVu Sans
+    monofont: DejaVu Sans Mono
+    mathfont: Latin Modern Math
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    colorlinks: false
+    fig-pos: htbp
+    fig-cap-location: bottom
+    tbl-cap-location: top
+    filters:
+      - formatos/pdf-callouts.lua
+      - quarto
+    keep-tex: true
+    include-in-header:
+      - formatos/pdf-cabecalho.tex
 execute:
   echo: false
   warning: true
@@ -31,6 +56,7 @@ fig-height: 4.6
 #| label: preparacao
 withCallingHandlers(source('R/executar.R'),
   message=function(m) invokeRestart('muffleMessage'))
+if(knitr::is_latex_output()) source('formatos/tabelas_pdf.R')
 mostrar <- function(x, legenda=NULL, digitos=4) {
   z <- as.data.frame(x)
   for(nm in names(z)) if(is.numeric(z[[nm]])) {
@@ -40,6 +66,7 @@ mostrar <- function(x, legenda=NULL, digitos=4) {
   }
   if('p'%in%names(z)) z$p<-ifelse(!is.na(x$p)&x$p<.001,'< 0,001',z$p)
   names(z)<-gsub('_',' ',names(z),fixed=TRUE)
+  if(knitr::is_latex_output()) return(tabela_pdf(z,legenda))
   knitr::kable(z,caption=legenda,align='l')
 }
 imagens <- function(nomes) knitr::include_graphics(file.path('figuras',paste0(nomes,'.png')))
@@ -55,7 +82,7 @@ anual[is.na(eventos),eventos:=0L]
 
 # Introdução
 
-::: {.callout-important}
+`r if(knitr::is_latex_output()) '::: {.pdf-aviso}' else '::: {.callout-important}'`
 ## Resultado e alcance da inferência
 
 Esta análise usa exclusivamente a base GOES-16 real. `r if(alerta_cauda) 'O ajuste GEV estacionário global não oferece extrapolações prospectivas confiáveis: a cauda modelada é excessivamente pesada e não reproduz os maiores máximos observados. Os níveis de retorno apresentados são resultados formais desse ajuste, usados para evidenciar sua limitação; não são previsões recomendadas de fluxo solar.' else 'Os resultados são condicionais à aproximação GEV, à dependência residual e à estabilidade temporal; os diagnósticos e as limitações acompanham as estimativas.'`

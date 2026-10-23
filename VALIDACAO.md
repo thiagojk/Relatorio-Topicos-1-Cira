@@ -192,6 +192,52 @@ A referência Azzalini e Capitanio (2003) e a citação de `sn` foram verificada
 - Nenhum placeholder nem resultado artificial no HTML. O MD5 da base confere; os logs da execução/renderização não apresentam warnings não tratados. As falhas de convergência e a não regularidade científica são expostas nas tabelas/texto, não ocultadas.
 - HTML ampliado: 6339913 bytes; SHA256 `dbb0c10e7a238d086e59732262b62113130b77673bbf81fc582c692876861f5d`. `docs/index.html` recebe cópia idêntica para preservar a estrutura Pages existente.
 
+## Versão PDF acadêmica — 23/10/2026
+
+### Arquivos e renderização
+
+- Fonte única: `relatorio.qmd`; nenhuma seção científica, cálculo ou conclusão foi alterada.
+- Quarto **1.7.32**, R **4.5.0**.
+- Mecanismo: **XeLaTeX**, XeTeX 3.141592653-2.6-0.999996, TeX Live 2025/dev/Debian já instalado. Não foi necessário instalar TinyTeX ou substituir a distribuição existente.
+- `quarto render relatorio.qmd --to pdf`: concluído, status 0, com a base real.
+- `quarto render relatorio.qmd --to html`: concluído novamente depois das correções PDF, status 0.
+- PDF: [`relatorio.pdf`](relatorio.pdf), na raiz, **50 páginas A4**, **4442806 bytes** (aproximadamente 4.44 MB).
+- SHA256 PDF: `be0fabed07f4e0bf9b68c77d9b05783f91aa0a86cc5b31db8412f14f61471049`.
+- HTML local: `relatorio.html`. A cópia publicada `docs/index.html` foi preservada byte a byte.
+
+### Adaptações exclusivas do PDF
+
+- Classe `scrartcl`, margens de 24 mm, fonte de texto 11 pt e entrelinha 1,12. Fontes DejaVu Serif/Sans/Mono e Latin Modern Math.
+- Capa com título, subtítulo e data já disponíveis, sem inventar autoria ou afiliação. Sumário com os títulos reais, seções e páginas numeradas; largura dos números do sumário ajustada para seções de dois dígitos.
+- `formatos/pdf-cabecalho.tex`: capa, espaçamento, preservação dos títulos com o conteúdo seguinte, legendas e quebra de identificadores extensos. Saída de `sessionInfo()` com quebra de linhas, sem ultrapassar margens.
+- `formatos/tabelas_pdf.R`: os mesmos valores formatados pelo HTML são apresentados em `longtable`, com colunas proporcionais e texto quebrável, fonte de 9,5 pt, cabeçalhos repetidos e reserva de altura para tabelas curtas. Nenhuma linha ou coluna foi removida.
+- `formatos/pdf-callouts.lua`: o quadro de advertência conserva título e texto em uma caixa sóbria, sem ícone de interface. Também permite quebrar identificadores longos sem mudar seus caracteres.
+- As 42 figuras usam os PNGs originais, sem recorte, mudanças nos dados ou reconstrução estética. O Quarto as apresenta individualmente, com proporções preservadas e legendas anexas; os QQ comparativos permanecem grandes e legíveis.
+- O tema SCSS e o CSS HTML não foram modificados. Código continua oculto; equações são compostas pelo LaTeX, sem depender de MathML ou de recursos remotos.
+
+### Inspeção visual e conferências
+
+**Todas as 50 páginas foram rasterizadas e inspecionadas visualmente**, incluindo capa, sumário, texto, equações GEV/suporte/retorno/Skew-t, tabelas, gráficos, referências e informações da sessão. As páginas finais foram comparadas pixel a pixel com a diagramação inspecionada: nenhuma diferença visual.
+
+- 42 figuras e 37 tabelas presentes. Nenhuma figura cortada, legenda de figura em página diferente, tabela ultrapassando a área útil, coluna ausente ou página em branco.
+- Verificação das caixas delimitadoras de texto/imagens: nenhum conteúdo fora das margens úteis; a paginação no rodapé foi excluída desse teste intencionalmente.
+- 436 valores numéricos distintos das tabelas HTML encontrados no texto extraído do PDF. Todas as demais células também foram localizadas, desconsiderando somente espaços e normalização Unicode.
+- Tabelas pequenas, inclusive parâmetros GEV e Skew-t, foram conferidas inteiras; tabelas extensas podem continuar com os cabeçalhos repetidos.
+- Nenhum código LaTeX literal de tabelas, símbolo de substituição de caractere ou placeholder foi encontrado.
+- Auditoria adicional com duas passagens XeLaTeX sobre o `.tex` final: **zero `Overfull`**, zero caracteres ausentes, zero referências indefinidas ou demais `Warning`. Permanecem **16 avisos `Underfull \hbox`**, de espaçamento em parágrafos justificados. Os trechos foram inspecionados e não apresentam cortes ou sobreposições; esses avisos não foram tratados como erros científicos.
+
+### Preservação do HTML e dos resultados
+
+O texto integral de `main`, as **37 tabelas** e os dados incorporados das **42 imagens** do HTML renderizado novamente são idênticos aos da versão anterior à tarefa. A cópia do Pages não foi alterada. A inspeção Chromium continua verificando imagens, tabelas e erros JavaScript.
+
+Hashes SHA256 confirmaram que todos os scripts em `R/`, CSVs científicos e PNGs são idênticos aos anteriores. Os objetos completos de `resultados/resumo.rds` e `resultados/comparacao_skew_t.rds` também foram comparados com `all.equal`: nenhuma mudança. Não se alteraram parâmetros GEV/Skew-t, ICs, níveis de retorno, amostra ou métodos. As iterações de diagramação utilizaram o LaTeX gerado para verificar ajustes de apresentação.
+
+### Git e reprodução PDF
+
+`relatorio.pdf` não é ignorado e é versionado com esta entrega. As regras adicionadas ao `.gitignore` restringem-se aos intermediários de `relatorio` (`.tex`, `.aux`, `.log`, `.toc`, `.out`, entre outros). O cabeçalho LaTeX em `formatos/` é código-fonte necessário, não um intermediário. O NetCDF continua ignorado e não é incluído no commit.
+
+O README registra os dois comandos, dependências XeLaTeX/fontes e a alternativa `quarto install tinytex` para computadores sem uma distribuição LaTeX.
+
 ## Git e reprodução
 
 O NetCDF não é versionado. `relatorio.html`, figuras, CSVs, RDS e arquivos temporários permanecem ignorados. A cópia autocontida em `docs/index.html` é versionada para o GitHub Pages. O projeto em ZIP disponibilizado separadamente inclui os resultados, sem a base de 241 MiB.
@@ -203,4 +249,4 @@ Rscript testes/testar.R
 quarto render relatorio.qmd
 ```
 
-No RStudio, abra projeto.Rproj e use Render em relatorio.qmd. Ao clonar o GitHub, obtenha primeiro o arquivo original e coloque-o em Dados/. Este documento registra a validação desta base e execução; o QMD recalcula os valores dinamicamente em novas renderizações. A exportação PDF é opcional e não foi validada com a base real.
+No RStudio, abra projeto.Rproj e use Render em relatorio.qmd. Ao clonar o GitHub, obtenha primeiro o arquivo original e coloque-o em Dados/. Este documento registra a validação desta base e execução; o QMD recalcula os valores dinamicamente em novas renderizações. A saída PDF também foi validada com a base real; veja a seção de validação PDF neste documento.
