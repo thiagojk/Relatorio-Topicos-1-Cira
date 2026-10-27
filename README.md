@@ -1,6 +1,6 @@
 # Valores extremos do fluxo solar GOES-16
 
-Projeto em R e Quarto inspirado metodologicamente no trabalho de Carolyne Soares de Brito. A análise usa XRS-B, controles de qualidade do próprio NetCDF, máximos diários/semanais/mensais, GEV, extensão de localização linear no tempo, diagnósticos e níveis de retorno com bootstrap de blocos móveis. Compara também a GEV com a Skew-t de Azzalini–Capitanio (`sn`), usando exatamente os mesmos máximos mensais elegíveis.
+Projeto em R e Quarto inspirado metodologicamente no trabalho de Carolyne Soares de Brito. A análise usa XRS-B, controles de qualidade do próprio NetCDF, máximos diários/semanais/mensais, GEV, extensão de localização linear no tempo, diagnósticos e níveis de retorno com bootstrap de blocos móveis.
 
 ## Versões do relatório
 
@@ -10,7 +10,7 @@ Projeto em R e Quarto inspirado metodologicamente no trabalho de Carolyne Soares
 
 ## Relatório no GitHub Pages
 
-A versão HTML completa da análise com dados reais está em `docs/index.html`, com gráficos, estilos e fórmulas incorporados. A publicação usa esses arquivos estáticos e não precisa baixar o NetCDF nem executar R no GitHub.
+A versão HTML completa da análise com dados reais está em `docs/index.html`, com gráficos, estilos e fórmulas incorporados. Os downloads ficam em `docs/relatorio.pdf` e `docs/relatorio.docx`, com links relativos no topo do site. A publicação usa esses arquivos estáticos e não precisa baixar o NetCDF nem executar R no GitHub.
 
 Para ativar, abra [Settings → Pages](https://github.com/thiagojk/Relatorio-Topicos-1-Cira/settings/pages), selecione **Deploy from a branch**, escolha **main** e **/docs**, e clique em **Save**. Após a implantação, o endereço será:
 
@@ -20,27 +20,39 @@ Para atualizar a versão publicada após alterar a análise, com a base real ins
 
 ```bash
 quarto render relatorio.qmd
-cp relatorio.html docs/index.html
-git add docs/index.html
+quarto render relatorio.qmd --to pdf
+quarto render relatorio.qmd --to docx
+python3 scripts/publicar_pages.py
+git add docs/
 git commit -m "Atualiza relatório publicado"
 git push origin HEAD:main
 ```
 
 O Pages publica novamente após o envio. A cópia em `docs/` representa a análise já renderizada; alterações apenas no código R ou no QMD não a atualizam automaticamente.
 
-## Estrutura didática do relatório
+## Escopo e estrutura do relatório
 
-A versão reestruturada apresenta **Introdução → Referencial teórico → Dados e metodologia → Análise descritiva → Resultados → Discussão → Conclusão → Referências**. O corpo principal prioriza tabelas resumidas, gráficos selecionados e interpretação. Controle de qualidade detalhado, otimização Skew-t, sensibilidades e informações de sessão continuam disponíveis no apêndice, nos scripts e em `VALIDACAO.md`.
+A versão reestruturada apresenta **Introdução → Referencial teórico → Dados e metodologia → Resultados → Discussão → Conclusão → Referências**. Resultados agrupa descrição do fluxo, referência Normal, dependência/blocos, máximos mensais, ajuste GEV, níveis de retorno, extensão temporal e síntese. O corpo principal prioriza tabelas resumidas, gráficos selecionados e interpretação. Controle de qualidade detalhado, otimização, sensibilidades e informações de sessão continuam disponíveis no apêndice, nos scripts e em `VALIDACAO.md`.
 
-Do trabalho de Carolyne foram adaptadas a tabela descritiva, a combinação histograma/série histórica e a função dos diagnósticos por quantis. O repositório contém o PDF dela, sem código-fonte separado. Não foram transferidos log-retornos, VaR ou alfa-estável. A GEV e a Skew-t continuam ajustadas ao fluxo original, sem excluir os maiores máximos.
+Do trabalho de Carolyne foram adaptadas a tabela descritiva, a combinação histograma/série histórica e a função dos diagnósticos por quantis. O repositório contém o PDF dela, sem código-fonte separado. Não foram transferidos log-retornos, VaR ou alfa-estável. A GEV continua ajustada ao fluxo original, sem excluir os maiores máximos.
 
 Novos produtos de apresentação, derivados dos resultados atuais, em `R/08_apresentacao.R`:
 
-- tabela descritiva enxuta, comparação dos calendários, GEV com IC bootstrap, níveis de retorno e comparação conjunta GEV × Skew-t;
+- tabela descritiva enxuta, comparação dos calendários, GEV com IC bootstrap, níveis de retorno;
 - série histórica com envelope mínimo–máximo e mediana por hora, usando todos os minutos válidos e conservando os picos; não é uma série minuto a minuto desenhada sem agregação;
 - comparação temporal dos três calendários e gráfico da amostra mensal com os três maiores destacados.
 
-As saídas anteriores continuam sendo calculadas e exportadas. `tabelas/*_relatorio.csv`, `serie_horaria_visual.csv` e os novos PNGs são reproduzíveis e permanecem ignorados pelo Git. A conversão dos critérios de estacionariedade para W/m² no relatório é apenas apresentação; preserva as diferenças de AIC e torna a unidade coerente com a comparação GEV × Skew-t.
+As saídas anteriores continuam sendo calculadas e exportadas. `tabelas/*_relatorio.csv`, `serie_horaria_visual.csv` e os novos PNGs são reproduzíveis e permanecem ignorados pelo Git. A conversão dos critérios de estacionariedade para W/m² no relatório é apenas apresentação; preserva as diferenças de AIC.
+
+## Publicação e downloads
+
+Para gerar e preparar todas as versões em uma só execução, com R e Quarto no PATH: `bash scripts/renderizar_publicar.sh`. O script interrompe se uma renderização falhar. Depois faça commit de `docs/`, `relatorio.pdf` e `relatorio.docx` para publicar.
+
+O Pages deste repositório usa **main → /docs**, sem workflow próprio de Actions. Arquivos somente na raiz não fazem parte dessa publicação. `scripts/publicar_pages.py` copia HTML/PDF/DOCX para a pasta publicada, verifica formatos e datas em relação aos fontes e grava `docs/manifesto.json` com tamanhos e hashes. Não publica uma saída antiga silenciosamente.
+
+Os links `relatorio.pdf` e `relatorio.docx` funcionam a partir da URL do projeto e de um domínio personalizado, sem apontar para arquivos locais ou páginas `blob` do GitHub. Para testar a estrutura final, execute `python3 -m http.server --directory docs 8000` e abra `http://localhost:8000/`.
+
+O projeto contém dados solares. BrasilAgro/Boa Safra, VaR, mínimos financeiros, alfa-estável e estimação PWM pertencem à referência e não foram implementados para esta base; não foram acrescentados resultados financeiros. O QQ Normal existente foi preservado e reapresentado como diagnóstico, sem alegar um ajuste que não foi realizado.
 
 ## Estado atual
 
@@ -54,7 +66,7 @@ O NetCDF de 252.483.840 bytes permanece ignorado pelo Git. A cópia fornecida pe
 2b5dded7d1a6e1f55cffb4d049664dfd52b4082245ae7d8abe05bbff63a3daa0
 ```
 
-O HTML é autocontido e está em `relatorio.html` após a execução. `relatorio.html`, figuras, tabelas e RDS são produtos reproduzíveis ignorados pelo Git. A cópia estática `docs/index.html` é versionada para o GitHub Pages; atualize-a após renderizar.
+O HTML é autocontido e está em `relatorio.html` após a execução. `relatorio.html`, figuras, tabelas e RDS são produtos reproduzíveis ignorados pelo Git. As três saídas de `docs/` são versionadas para o Pages; atualize-as com `python3 scripts/publicar_pages.py` após renderizar todos os formatos.
 
 ## Gerar o relatório
 
@@ -119,7 +131,6 @@ O modelo já acompanha o repositório. Para recriá-lo opcionalmente, use `pytho
 - `R/04_block_maxima.R`: grades de calendário, cobertura e elegibilidade dos máximos.
 - `R/05_gev.R`: múltiplos inícios de otimização, comparação de blocos e extensão temporal.
 - `R/06_niveis_retorno.R`: IC por bootstrap móvel, níveis de retorno e episódios separados.
-- `R/07_skew_t.R`: validação da amostra comum, estimação Skew-t, múltiplos inícios, comparação GEV × Skew-t, diagnósticos e influência dos maiores máximos.
 - `R/08_apresentacao.R`: resumos e figuras didáticas derivados dos mesmos dados e ajustes, sem modificar a metodologia.
 - `R/executar.R`: execução integral compartilhada com o relatório.
 - `figuras/`, `tabelas/`, `resultados/`: saídas geradas, ignoradas no Git.
@@ -151,24 +162,6 @@ Para executar só a análise: `Rscript R/executar.R`. Resultados resumidos ficam
 - Declustering: excedências do P99,9 global, regra de intervalo entre excedências, 6 h como principal, 1/24 h para sensibilidade. Não constitui identificação física de flares.
 - Níveis históricos estacionários de 1, 2, 5 e 10 anos são resumos condicionais às hipóteses. Sob mudança temporal, não são previsões. Quantis da extensão mantêm a covariável congelada e recebem ressalvas explícitas.
 - Não se conclui independência com p > 0,05, nem cauda Fréchet apenas pelo sinal de xi ou desvio de normalidade.
-
-## Comparação GEV × Skew-t
-
-A comparação principal preserva os 94 máximos mensais elegíveis da GEV: asserções conferem quantidade, datas, valores e positividade contra os dados efetivamente usados no ajuste original. A Skew-t usa a parametrização direta de `sn`: localização xi_ST, escala omega, slant alpha e graus de liberdade nu. Localização/escala não são média/desvio padrão; xi_ST não é a forma da GEV. A estimação usa `st.mple(penalty=NULL)` com oito inícios e dois métodos, sem truncar em zero ou transformar a resposta em log.
-
-**Resultado real:** a Skew-t não melhorou conjuntamente o ajuste. A GEV teve menor AIC/BIC nominal, menor discrepância PP e menor erro dos quantis mais altos do QQ. A Skew-t atingiu uma fronteira de assimetria extrema, sem alpha finito estável; por isso não são publicados EP/IC Wald para essa solução. Ambas extrapolam excessivamente a cauda. As exclusões apenas diagnósticas de um/três maiores máximos não inverteram a preferência dos critérios pela GEV; não justificam retirar dados do principal. Valores completos e verificações estão em `VALIDACAO.md` e no relatório.
-
-As log-verossimilhanças comparativas são expressas na mesma escala W/m², com Jacobiano do reescalonamento numérico. AIC/BIC são nominais diante da dependência mensal, heterogeneidade temporal e solução Skew-t não regular. Não se usa LRT entre as famílias, nem se atribui à Skew-t a justificativa assintótica da GEV. Quantis equivalentes da Skew-t não substituem níveis de retorno GEV e não são previsões validadas.
-
-Novas saídas reproduzíveis:
-
-- `tabelas/amostra_comum_mensal.csv`: datas, máximos e cobertura da amostra compartilhada.
-- `tabelas/parametros_skew_t.csv`, `comparacao_gev_skew_t.csv`, `quantis_cauda_gev_skew_t.csv`: parâmetros, critérios e cauda.
-- `tabelas/otimizacao_skew_t.csv`: todos os inícios, métodos, códigos, mensagens e avisos nos três cenários.
-- `tabelas/sensibilidade_gev_skew_t.csv`, `diagnosticos_sensibilidade_skew_t.csv`: influência dos maiores eventos.
-- `tabelas/diagnosticos_gev_skew_t.csv`: valores ponto a ponto dos QQ/PP, sem NA.
-- `resultados/comparacao_skew_t.rds`: objetos numéricos e conclusão gerada a partir dos resultados.
-- `figuras/comparacao_*.png`: densidade visualizada em log10 com Jacobiano, QQ separados em limites comuns, PP e cauda superior.
 
 ## Testes técnicos
 

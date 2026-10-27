@@ -1,6 +1,6 @@
 # Deriva SOMENTE produtos de apresentação. Não ajusta modelos, sorteia amostras,
 # altera a seleção de máximos ou modifica os objetos recebidos.
-apresentar_resultados <- function(base, ex, block, modelos, retornos, skew_t) {
+apresentar_resultados <- function(base, ex, block, modelos, retornos) {
   medidas <- c('N','Mínimo','Q1','Mediana','Média','Q3','Máximo','Desvio padrão',
                'CV','Assimetria (momento)','Curtose (Pearson)')
   rotulos <- c('Observações válidas','Mínimo','Primeiro quartil','Mediana','Média',
@@ -31,10 +31,6 @@ apresentar_resultados <- function(base, ex, block, modelos, retornos, skew_t) {
   nr <- copy(retornos$tabela[,.(anos,estimativa,inferior,superior)])
   setnames(nr,c('Período (anos)','Nível (W/m²)','IC inferior','IC superior'))
   csv(nr,'retornos_relatorio')
-  cmp <- merge(skew_t$criterios[,.(modelo,logLik,AIC,BIC)],
-    skew_t$metricas[,.(modelo,rmse_pp,erro_log_cauda)],by='modelo',sort=FALSE)
-  setnames(cmp,c('Modelo','logLik','AIC','BIC','RMSE PP','Erro cauda QQ'))
-  csv(cmp,'comparacao_relatorio')
   # Uniformizar a unidade da comparação temporal apenas na apresentação.
   # Ambos os ajustes já existentes utilizam os mesmos dados e reescalonamento.
   ns <- copy(modelos$comparacao_ns)
@@ -80,7 +76,7 @@ apresentar_resultados <- function(base, ex, block, modelos, retornos, skew_t) {
     labs(title='Como a agregação modifica os máximos?',x='Início do bloco (UTC)',
       y='Máximo (W/m²), eixo log10',caption='Mesma escala nos três painéis; blocos inelegíveis ficam sem valor.'),
     'maximos_comparados',h=6)
-  mensal <- copy(skew_t$amostra_comum)
+  mensal <- copy(block$blocos$mensal[elegivel==TRUE,.(inicio,fim,maximo,cobertura)])
   destaques <- mensal[head(order(-maximo,inicio),3L)]
   destaques[,rotulo_y:=maximo*c(1.4,1.5,2.5)[seq_len(.N)]]
   stopifnot(identical(mensal$maximo,block$blocos$mensal[elegivel==TRUE,maximo]))
@@ -98,6 +94,6 @@ apresentar_resultados <- function(base, ex, block, modelos, retornos, skew_t) {
       caption='Destaques: três maiores máximos. Rótulos identificam o mês, não a data de um flare.'),
     'mensais_destaque')
   list(descritiva=descritiva,blocos=blocos,parametros=pars,retornos=nr,
-    comparacao=cmp,estacionariedade=ns,horas=horas,mensal=mensal,
+    estacionariedade=ns,horas=horas,mensal=mensal,
     destaques=destaques,plots=list(serie=g1,blocos=g2,mensal=g3))
 }

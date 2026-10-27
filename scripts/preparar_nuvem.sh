@@ -20,10 +20,10 @@ Dir::Cache::archives "/workspace/.tools/apt/archives";
 APT::Get::List-Cleanup "0";
 APT
 # Sem dpkg install: downloads autenticados pelos índices assinados, extraídos em pasta local.
-if ! "$TOOLS/bin/Rscript" -e 'stopifnot(all(vapply(c("ncdf4","data.table","ggplot2","evd","knitr","rmarkdown","sn","numDeriv"),requireNamespace,quietly=TRUE,FUN.VALUE=logical(1))))' >/dev/null 2>&1; then
+if ! "$TOOLS/bin/Rscript" -e 'stopifnot(all(vapply(c("ncdf4","data.table","ggplot2","evd","knitr","rmarkdown"),requireNamespace,quietly=TRUE,FUN.VALUE=logical(1))))' >/dev/null 2>&1; then
   APT_CONFIG="$TOOLS/apt/apt.conf" /usr/bin/apt-get update
   APT_CONFIG="$TOOLS/apt/apt.conf" /usr/bin/apt-get -o Debug::NoLocking=1 --download-only --no-install-recommends -y install \
-    r-base-core r-cran-data.table r-cran-ncdf4 r-cran-ggplot2 r-cran-evd r-cran-knitr r-cran-rmarkdown r-cran-sn r-cran-numderiv
+    r-base-core r-cran-data.table r-cran-ncdf4 r-cran-ggplot2 r-cran-evd r-cran-knitr r-cran-rmarkdown
   for archive in "$TOOLS"/apt/archives/*.deb; do dpkg-deb -x "$archive" "$TOOLS/root"; done
   python3 - <<'PY'
 from pathlib import Path
@@ -77,5 +77,5 @@ export PATH=/workspace/.tools/bin:$PATH
 exec /workspace/.tools/quarto-1.7.32/bin/quarto "$@"
 QWRAP
 chmod +x "$TOOLS/bin/quarto"
-"$TOOLS/bin/Rscript" -e 'stopifnot(all(vapply(c("ncdf4","data.table","ggplot2","evd","knitr","rmarkdown","sn","numDeriv"),requireNamespace,quietly=TRUE,FUN.VALUE=logical(1)))); print(R.version.string)'
+"$TOOLS/bin/Rscript" -e 'stopifnot(all(vapply(c("ncdf4","data.table","ggplot2","evd","knitr","rmarkdown"),requireNamespace,quietly=TRUE,FUN.VALUE=logical(1)))); print(R.version.string)'
 "$TOOLS/bin/quarto" --version

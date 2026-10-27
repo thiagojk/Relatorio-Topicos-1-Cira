@@ -1,6 +1,6 @@
 ---
 title: "Análise de Valores Extremos do Fluxo de Raios X Solar observado pelo GOES-16"
-subtitle: "Máximos mensais, comparação GEV × Skew-t e limites da extrapolação"
+subtitle: "Máximos mensais, ajuste GEV e limites da extrapolação"
 lang: pt-BR
 date: last-modified
 format:
@@ -89,6 +89,13 @@ anual <- merge(exploratoria$anual,retornos$eventos_ano,by='ano',all.x=TRUE)
 anual[is.na(eventos),eventos:=0L]
 ```
 
+::: {.content-visible when-format="html"}
+<nav class="downloads-relatorio" aria-label="Baixar relatório">
+<a class="btn btn-primary" href="relatorio.pdf" download>Baixar relatório em PDF</a>
+<a class="btn btn-outline-primary" href="relatorio.docx" download>Baixar relatório em Word</a>
+</nav>
+:::
+
 # Introdução
 
 O GOES-16 registra o fluxo de raios X proveniente do Sol. No canal XRS-B, aumentos abruptos podem acompanhar períodos de intensa atividade solar, como erupções solares. Aqui, o interesse está na **magnitude do fluxo observado**: um máximo estatístico não é, por si só, uma erupção fisicamente identificada ou classificada.
@@ -100,7 +107,7 @@ O objetivo geral é caracterizar esses extremos e avaliar a capacidade dos model
 - descrever a distribuição e a evolução temporal do fluxo;
 - comparar máximos diários, semanais e mensais e selecionar uma agregação de referência;
 - ajustar a GEV, examinar seus diagnósticos e interpretar níveis de retorno com incerteza;
-- avaliar uma extensão temporal e comparar a GEV com a Skew-t na mesma amostra.
+- avaliar a dependência, uma extensão temporal e a sensibilidade dos resultados aos maiores máximos.
 
 A apresentação toma como inspiração a sequência descritiva do trabalho de Brito (s.d.): primeiro os dados, depois os modelos e seus resultados. A aplicação é adaptada ao fluxo solar, sem log-retornos, medidas de risco financeiro ou classificação física de flares. Os resultados serão avaliados por sua coerência com as observações, inclusive quando mostrarem limitações dos modelos.
 
@@ -155,12 +162,6 @@ Para máximos mensais, $b=12$: o nível de dez anos é um quantil com probabilid
 
 Quanto maior o período, mais distante da região bem informada pelos dados fica o quantil. Se a cauda do modelo não representar bem a amostra, um intervalo calculado sob esse modelo não corrige essa falha. Assim, níveis de retorno precisam ser acompanhados de diagnósticos e de uma avaliação da estabilidade temporal.
 
-## Distribuição Skew-t
-
-A Skew-t de Azzalini e Capitanio (2003) é uma extensão assimétrica da distribuição t de Student, capaz de representar assimetria e caudas pesadas. Ela é usada como alternativa flexível para a **distribuição empírica dos mesmos máximos mensais**.
-
-Sua justificativa é diferente da GEV: a GEV possui fundamentação assintótica específica para máximos por blocos; a Skew-t é uma família paramétrica alternativa, sem herdar automaticamente essa fundamentação. A comparação busca verificar se trocar a família melhora a representação observada, sobretudo da cauda, sem decidir previamente qual modelo será superior.
-
 # Dados e metodologia
 
 A análise utiliza o arquivo GOES-16 fornecido para o projeto, com a variável `xrsb_flux`, do canal XRS-B (0,1–0,8 nm). O período efetivamente observado vai de **`r format(min(dados_xrs$data_hora),'%d/%m/%Y',tz='UTC')` a `r format(max(dados_xrs$data_hora),'%d/%m/%Y',tz='UTC')`**, em UTC. Cada registro representa uma média de um minuto, com cadência mediana de `r base$cadencia` segundos e unidade W/m². Portanto, estudam-se máximos dessas médias, não picos instantâneos.
@@ -175,11 +176,11 @@ A GEV é estimada por máxima verossimilhança com `evd`. A comparação tempora
 
 Os níveis de retorno de 1, 2, 5 e 10 anos recebem intervalos percentis de 95% por bootstrap circular de blocos móveis. Foram previstas `r retornos$B` replicações e segmentos de `r retornos$L` meses na grade de calendário, conservando as lacunas. O procedimento preserva parte da dependência local, mas não corrige a heterogeneidade de longo prazo.
 
-A Skew-t é estimada por máxima verossimilhança sem penalização, com o pacote `sn`, sobre **exatamente a mesma amostra mensal da GEV**. Usam-se QQ/PP, quantis superiores, log-verossimilhança, AIC e BIC na mesma unidade. Menores AIC/BIC e menores discrepâncias favorecem relativamente um ajuste; não demonstram adequação absoluta. Não se usa teste de razão de verossimilhanças entre GEV e Skew-t, pois essas famílias não são aninhadas. Sensibilidades sem um e sem três maiores máximos são apenas diagnósticas e não alteram a análise principal.
+# Resultados
 
-# Análise descritiva
+## Análise descritiva do fluxo solar
 
-## Como são os valores observados?
+### Como são os valores observados?
 
 A base contém **`r num(nrow(dados_xrs))` registros**, dos quais **`r num(nrow(dados_limpos))` (`r format(round(100*nrow(dados_limpos)/nrow(dados_xrs),2),decimal.mark=',')`%)** satisfazem os critérios de qualidade. Foram removidos `r num(nrow(dados_xrs)-nrow(dados_limpos))` registros; nesta base, a contabilidade atribui essas remoções a flags diferentes de `good_data` (incluindo condições combinadas). Ausência temporal de aquisição e rejeição de qualidade podem ambas criar lacunas na série válida, mas não são a mesma quantidade.
 
@@ -191,7 +192,7 @@ mostrar(apresentacao$descritiva,
 
 A média (`r sci(exploratoria$descritiva[medida=='Média',valor])` W/m²) é `r round(exploratoria$descritiva[medida=='Média',valor]/exploratoria$descritiva[medida=='Mediana',valor],1)` vezes a mediana. O máximo (`r sci(max(dados_limpos$xrsb_flux))` W/m²) é cerca de **`r num(round(max(dados_limpos$xrsb_flux)/median(dados_limpos$xrsb_flux)))` vezes a mediana**. Isso mostra a diferença entre o fluxo típico e os picos mais elevados. O CV de `r round(exploratoria$descritiva[medida=='CV',valor],2)` expressa grande dispersão relativa; a assimetria positiva e a curtose elevada reforçam a presença de poucos valores muito distantes do centro. Esses momentos descrevem a amostra, sem provar uma lei física de cauda.
 
-## Distribuição e série histórica
+### Distribuição e série histórica
 
 A @fig-distribuicao-hist e a @fig-serie-fluxo adaptam a combinação de histograma e série histórica da Figura 2 de Brito (s.d.). O fluxo varia por várias ordens de magnitude, razão para a escala log10 de visualização. Não se calcula log-retorno, nem se muda a variável utilizada na modelagem.
 
@@ -211,7 +212,7 @@ imagens('serie_fluxo_horaria')
 
 Há diferenças no patamar do fluxo ao longo do período e picos breves acima da região habitual. O envelope conserva os extremos horários, ao contrário de mostrar apenas uma média ou de sortear pontos no tempo. Trata-se de um resumo gráfico horário de toda a janela observada, não de uma curva contínua reconstruída onde faltam dados.
 
-## Variação entre anos
+### Variação entre anos
 
 ```{r}
 #| label: fig-variacao-anual
@@ -221,9 +222,19 @@ imagens('boxplots_ano')
 
 As posições das caixas mudam ao longo dos anos, mostrando que a variação não se limita a alguns picos isolados. Nas estatísticas calculadas com todos os minutos válidos, a mediana anual foi menor em `r anual[which.min(mediana),ano]` e maior em `r anual[which.max(mediana),ano]`, com razão de `r round(max(anual$mediana)/min(anual$mediana),1)` entre elas. O maior fluxo anual ocorreu em `r anual[which.max(maximo),ano]`: um grande pico e um patamar habitual alto são aspectos diferentes. Os anos inicial e final têm janelas parciais e exigem cuidado na comparação.
 
-# Resultados
+## Distribuição do fluxo: referência Normal
 
-## Escolha dos máximos em blocos {#sec-blocos}
+A distribuição do fluxo é assimétrica e restrita a valores positivos. O QQ contra a Normal já produzido pelo projeto oferece uma referência descritiva: ele não é um novo ajuste de um modelo financeiro nem um teste que identifique automaticamente uma lei de cauda.
+
+```{r}
+#| label: fig-normal
+#| fig-cap: "QQ do fluxo contra quantis Normais, na amostra visual determinística. O afastamento sistemático da reta mostra a inadequação dessa referência às caudas do fluxo."
+imagens('qq_normal')
+```
+
+Os picos superiores se afastam fortemente da reta. Isso concorda com a assimetria e curtose empíricas, mas não prova por si só o domínio Fréchet da GEV. A questão seguinte é como definir uma amostra de máximos por blocos, adequada ao objetivo de estudar magnitudes elevadas.
+
+## Dependência e escolha dos máximos em blocos {#sec-blocos}
 
 Os três calendários geram amostras de tamanhos distintos. O bloco mensal apresenta a menor correlação de pares consecutivos entre os candidatos avaliados, embora essa correlação continue alta.
 
@@ -245,7 +256,7 @@ Os painéis mostram picos comuns às três agregações e diferenças de intensi
 
 ## Série histórica dos máximos mensais
 
-A amostra principal contém **`r nrow(skew_t$amostra_comum)` máximos mensais**, de `r format(min(skew_t$amostra_comum$inicio),'%m/%Y')` a `r format(max(skew_t$amostra_comum$inicio),'%m/%Y')`. São os valores que entram efetivamente tanto na GEV quanto na Skew-t.
+A amostra principal contém **`r nrow(apresentacao$mensal)` máximos mensais**, de `r format(min(apresentacao$mensal$inicio),'%m/%Y')` a `r format(max(apresentacao$mensal$inicio),'%m/%Y')`. São os valores que entram efetivamente na GEV principal.
 
 ```{r}
 #| label: fig-mensais-principais
@@ -253,7 +264,7 @@ A amostra principal contém **`r nrow(skew_t$amostra_comum)` máximos mensais**,
 imagens('mensais_destaque')
 ```
 
-O maior máximo é `r sci(max(skew_t$amostra_comum$maximo))` W/m², no bloco iniciado em `r format(skew_t$amostra_comum[which.max(maximo),inicio],'%m/%Y')`. Os pontos menores também são relevantes: o modelo precisa representar a distribuição de todos os máximos elegíveis, não apenas os maiores. A evolução temporal sugere que reuni-los em uma única distribuição constante pode ser uma aproximação forte.
+O maior máximo é `r sci(max(apresentacao$mensal$maximo))` W/m², no bloco iniciado em `r format(apresentacao$mensal[which.max(maximo),inicio],'%m/%Y')`. Os pontos menores também são relevantes: o modelo precisa representar a distribuição de todos os máximos elegíveis, não apenas os maiores. A evolução temporal sugere que reuni-los em uma única distribuição constante pode ser uma aproximação forte.
 
 ## Ajuste da GEV
 
@@ -273,7 +284,7 @@ A localização $\hat\mu=$ `r sci(modelos$parametros[parametro=='mu',estimativa]
 imagens('qq_gev_mensal')
 ```
 
-A região superior afasta-se fortemente da reta. Na posição empírica do maior ponto, o quantil teórico é `r sci(skew_t$metricas[modelo=='GEV',quantil_maior_ponto])` W/m², contra `r sci(max(skew_t$amostra_comum$maximo))` W/m² observado. A GEV extrapola muito acima dos maiores fluxos desta amostra. O QQ cumpre a função diagnóstica que motiva a Figura 8 de Brito (s.d.), mas confronta diretamente a distribuição GEV ajustada, em vez de copiar a comparação com Gumbel ou classificar a cauda apenas pela curvatura.
+A região superior afasta-se fortemente da reta. Na posição empírica do maior ponto, o quantil teórico é `r sci(evd::qgev(max(ppoints(nrow(apresentacao$mensal))),loc=f$fit$estimate['loc'],scale=f$fit$estimate['scale'],shape=f$fit$estimate['shape'])*f$escala)` W/m², contra `r sci(max(apresentacao$mensal$maximo))` W/m² observado. A GEV extrapola muito acima dos maiores fluxos desta amostra. O QQ cumpre a função diagnóstica que motiva a Figura 8 de Brito (s.d.), mas confronta diretamente a distribuição GEV ajustada, em vez de copiar a comparação com Gumbel ou classificar a cauda apenas pela curvatura.
 
 ```{r}
 #| label: fig-pp-gev-principal
@@ -281,7 +292,7 @@ A região superior afasta-se fortemente da reta. Na posição empírica do maior
 imagens('pp_gev_mensal')
 ```
 
-O PP resume discrepâncias no conjunto da distribuição; seu RMSE é `r signif(skew_t$metricas[modelo=='GEV',rmse_pp],3)`. Mesmo um alinhamento razoável de parte dos pontos não compensa o desvio superior do QQ. Portanto, **convergência numérica não equivale a adequação estatística**.
+O PP resume discrepâncias no conjunto da distribuição; seu RMSE é `r signif(modelos$comparacao[bloco==principal,rmse_pp],3)`. Mesmo um alinhamento razoável de parte dos pontos não compensa o desvio superior do QQ. Portanto, **convergência numérica não equivale a adequação estatística**.
 
 ## Níveis de retorno {#sec-retornos}
 
@@ -309,7 +320,7 @@ O bootstrap teve `r retornos$sucessos` ajustes válidos em `r retornos$B` tentat
 
 Há dependência residual: a correlação de pares mensais adjacentes foi `r round(modelos$comparacao[bloco=='mensal',acf1_pares],3)`, em `r modelos$comparacao[bloco=='mensal',n_pares]` pares. No PIT da GEV (probabilidade acumulada atribuída a cada máximo), o Ljung–Box no maior trecho contíguo apresentou valor p `r p_texto(modelos$pit_lb)`. Esses resultados e a variação anual desaconselham tratar os meses automaticamente como independentes e identicamente distribuídos. Recortes, autocorrelações e lags estão no [Apêndice: dependência e comparação temporal](#ap-temporal).
 
-A extensão linear acrescenta uma possível mudança na localização, mantendo escala e forma constantes. A @tbl-nao-estacionaria compara os mesmos máximos e apresenta os critérios na mesma unidade W/m² usada adiante para GEV × Skew-t.
+A extensão linear acrescenta uma possível mudança na localização, mantendo escala e forma constantes. A @tbl-nao-estacionaria compara os mesmos máximos e apresenta os critérios na unidade original W/m².
 
 ```{r}
 #| label: tbl-nao-estacionaria
@@ -327,55 +338,19 @@ if(modelos$ns$ok) imagens('pit_tempo')
 
 A extensão não elimina o padrão temporal observado. Uma reta na localização é uma aproximação restritiva diante das diferenças entre anos e não representa necessariamente a dinâmica da atividade solar. O teste nominal também pressupõe regularidade e independência aproximadas; com dependência residual, sua interpretação é exploratória.
 
-## Comparação GEV × Skew-t
+## Síntese dos principais resultados
 
-A comparação usa os **mesmos `r nrow(skew_t$amostra_comum)` máximos mensais** e a mesma unidade de fluxo. A Skew-t considerada não resolveu o problema: sua estimação chegou a assimetria extrema e instável, e a cauda mais alta continuou excessiva.
+A descrição revelou forte assimetria e mudanças no patamar do fluxo ao longo do período. A escolha de máximos mensais reduziu a correlação entre blocos em relação aos calendários diário e semanal, mas a dependência continuou importante.
 
-Na parametrização direta de `sn`, os parâmetros são localização $\xi_{ST}$, escala $\omega>0$, inclinação $\alpha$ e graus de liberdade $\nu>0$. A localização Skew-t não é a forma $\xi$ da GEV; escala não é desvio-padrão e inclinação não é o coeficiente de assimetria empírica. Aqui, $\alpha\approx$ `r sci(skew_t$ajuste$dp['alpha'])` e $\nu\approx$ `r round(skew_t$ajuste$dp['nu'],3)`. O algoritmo terminou numericamente, mas não identificou um valor finito estável de assimetria. **Não são apresentados erros padrão ou IC de Wald como se essa solução fosse regular.** As estimativas e os avisos completos estão no [Apêndice: estimação Skew-t](#ap-skew).
-
-```{r}
-#| label: tbl-comparacao-skew
-mostrar(apresentacao$comparacao,
- 'Comparação na mesma amostra. AIC/BIC e medidas de discrepância: menor é melhor. Erro cauda QQ = média de |log10(teórico/observado)| nos pontos com p ≥ 0,90. Critérios Skew-t nominais em solução não regular.')
-```
-
-A GEV tem menor AIC e BIC: as diferenças **Skew-t menos GEV** são `r round(skew_t$delta_aic,2)` e `r round(skew_t$delta_bic,2)`, respectivamente. Também apresenta menor RMSE do PP e menor erro agregado dos quantis superiores. Isso é uma vantagem **relativa**, não prova de um bom modelo de extremos. Dependência, heterogeneidade e a solução Skew-t de fronteira limitam a interpretação clássica desses critérios.
-
-```{r}
-#| label: fig-pp-comparados
-#| fig-cap: "PP dos dois modelos sobre os mesmos máximos. A diagonal representa concordância entre probabilidade empírica e ajustada."
-imagens('comparacao_pp')
-```
-
-Os dois modelos apresentam desvios da diagonal. A menor discrepância global da GEV é coerente com o RMSE apresentado, mas o PP não dá destaque suficiente, sozinho, aos maiores fluxos. Por isso, a comparação precisa ser complementada pela cauda.
-
-```{r}
-#| label: tbl-cauda-comparada
-mostrar(skew_t$cauda[,.(probabilidade,empirico,GEV,Skew_t)],
- 'Quantis empíricos (tipo 7) e dos modelos, em W/m². Probabilidades mais altas são diagnósticos exploratórios de grande incerteza.')
-```
-
-A Skew-t fica relativamente mais próxima em P90/P95, mas piora em P97,5/P99 e no erro agregado do QQ superior. Com `r nrow(skew_t$amostra_comum)` máximos, seriam esperadas apenas `r round(nrow(skew_t$amostra_comum)*.05,2)` observações acima do P95 e `r round(nrow(skew_t$amostra_comum)*.01,2)` acima do P99 sob estabilidade. Esses quantis empíricos têm grande incerteza, agravada pela dependência; não são uma validação precisa de probabilidades raras.
-
-```{r}
-#| label: fig-cauda-comparada
-#| fig-cap: "Cauda superior: quantis empíricos versus os dois ajustes, com eixo vertical log10. O crescimento das curvas muito acima da amostra evidencia extrapolação excessiva."
-imagens('comparacao_cauda')
-```
-
-As diferenças superiores não desapareceram ao mudar de família. No P99, os quantis teóricos são `r round(skew_t$cauda[probabilidade==.99,GEV/empirico])` vezes o empírico para GEV e `r round(skew_t$cauda[probabilidade==.99,Skew_t/empirico])` vezes para Skew-t. O gráfico mostra a escala dessa discrepância; não estabelece qual seria o verdadeiro quantil populacional.
-
-A preferência relativa pela GEV também persiste nas sensibilidades: sem o maior máximo, a diferença de AIC é `r round(skew_t$sens_diagnosticos[cenario=='sem_1_maior',delta_AIC],2)`; sem os três maiores, `r round(skew_t$sens_diagnosticos[cenario=='sem_3_maiores',delta_AIC],2)`. A Skew-t permanece na fronteira e as extrapolações mudam de magnitude. Portanto, os problemas não se resumem a um único pico, nem há estabilidade suficiente para previsão. Essas retiradas são apenas diagnósticas; todos os máximos continuam no ajuste principal. As tabelas completas estão no [Apêndice: sensibilidade](#ap-sensibilidade).
-
-**A Skew-t apresentou evidência de ajuste empírico melhor que a GEV para os máximos mensais? Não, nos resultados desta base.** A GEV foi relativamente melhor nos critérios conjuntos examinados, mas nenhuma das duas famílias representou satisfatoriamente a cauda para extrapolação segura. Quantis equivalentes da Skew-t não substituem os níveis de retorno GEV e têm interpretação distinta (ver [Apêndice: estimação Skew-t](#ap-skew)).
+A GEV convergiu e permitiu calcular quantis e intervalos. Contudo, o QQ, a forma elevada e a falta de excedências dos níveis formais revelaram má calibração na cauda superior. A extensão linear não solucionou essa limitação. A análise caracteriza os extremos observados, sem validar previsões de futuras erupções solares.
 
 # Discussão
 
-Os dados combinam forte assimetria, picos elevados e mudanças no patamar do fluxo. Os máximos mensais organizam a análise, mas não tornam essa série automaticamente homogênea ou independente. A GEV produziu uma cauda muito pesada e níveis de retorno mal calibrados; a Skew-t considerada também falhou no extremo superior e apresentou estimação instável.
+Os dados combinam forte assimetria, picos elevados e mudanças no patamar do fluxo. Os máximos mensais organizam a análise, mas não tornam essa série automaticamente homogênea ou independente. A GEV produziu uma cauda muito pesada e níveis de retorno mal calibrados.
 
-**Encontrar problemas no ajuste não significa que a análise falhou.** Os diagnósticos revelam limites de modelos relativamente simples para representar uma série temporalmente heterogênea. Uma preferência de AIC/BIC entre duas famílias inadequadas não transforma a vencedora em modelo validado. Da mesma forma, a extensão linear não resolver o problema não demonstra estacionariedade.
+**Encontrar problemas no ajuste não significa que a análise falhou.** Os diagnósticos revelam limites de modelos relativamente simples para representar uma série temporalmente heterogênea. Da mesma forma, a extensão linear não resolver o problema não demonstra estacionariedade.
 
-As principais limitações são os `r nrow(skew_t$amostra_comum)` máximos mensais, a dependência residual, as diferenças ao longo do período, a simplicidade da localização linear e a incerteza crescente da extrapolação. A cobertura mínima reduz o risco de representar um mês por poucos minutos, mas não recupera extremos eventualmente ausentes. O bootstrap preserva dependência local; não contempla toda a incerteza estrutural.
+As principais limitações são os `r nrow(apresentacao$mensal)` máximos mensais, a dependência residual, as diferenças ao longo do período, a simplicidade da localização linear e a incerteza crescente da extrapolação. A cobertura mínima reduz o risco de representar um mês por poucos minutos, mas não recupera extremos eventualmente ausentes. O bootstrap preserva dependência local; não contempla toda a incerteza estrutural.
 
 Uma série mais longa e covariáveis externas poderiam apoiar investigações posteriores. Isso não permite atribuir mecanismos físicos aos padrões atuais: o estudo caracteriza o fluxo disponível e não identifica individualmente flares nem estabelece relações causais com a atividade solar.
 
@@ -383,15 +358,14 @@ Uma série mais longa e covariáveis externas poderiam apoiar investigações po
 
 Foi possível caracterizar os extremos do fluxo XRS-B do GOES-16: os valores típicos são muito menores que os maiores picos, e o comportamento varia no tempo. Essa diferença justifica estudar os extremos separadamente do comportamento médio.
 
-A comparação entre calendários levou a **`r nrow(skew_t$amostra_comum)` máximos mensais elegíveis**, com menor correlação adjacente entre os candidatos, mas ainda com dependência importante. A GEV permitiu organizar probabilisticamente esses máximos e estudar níveis de retorno, porém sua forma elevada e os diagnósticos indicaram limitações relevantes na cauda superior.
+A comparação entre calendários levou a **`r nrow(apresentacao$mensal)` máximos mensais elegíveis**, com menor correlação adjacente entre os candidatos, mas ainda com dependência importante. A GEV permitiu organizar probabilisticamente esses máximos e estudar níveis de retorno, porém sua forma elevada e os diagnósticos indicaram limitações relevantes na cauda superior.
 
-A GEV apresentou desempenho relativo melhor que a Skew-t considerada em AIC/BIC, PP e discrepância agregada dos quantis altos. A Skew-t não resolveu a cauda e atingiu assimetria extrema sem estimativa finita estável. A extensão linear da localização também não representou suficientemente a heterogeneidade temporal.
+A extensão linear da localização não representou suficientemente a heterogeneidade temporal. A dependência residual e o número limitado de máximos restringem a interpretação dos intervalos e das extrapolações.
 
-Assim, a resposta à pergunta inicial é que **os extremos puderam ser descritos, mas os modelos globais investigados não forneceram representação suficientemente confiável para extrapolação**. Os níveis de retorno e seus intervalos são condicionais aos modelos e devem ser interpretados com cautela, sem apresentá-los como previsões de futuras erupções solares.
+Assim, a resposta à pergunta inicial é que **os extremos puderam ser descritos, mas a GEV global e sua extensão linear não forneceram representação suficientemente confiável para extrapolação**. Os níveis de retorno e seus intervalos são condicionais aos modelos e devem ser interpretados com cautela, sem apresentá-los como previsões de futuras erupções solares.
 
 # Referências
 
-- Azzalini, A.; Capitanio, A. (2003). *Distributions generated by perturbation of symmetry with emphasis on a multivariate skew t-distribution*. Journal of the Royal Statistical Society: Series B, 65(2), 367–389. Referência indicada na documentação instalada de `sn::st.mple`; versão de acesso: <https://arxiv.org/abs/0911.2342>.
 - Brito, Carolyne Soares de (s.d.). *Análise da Cotação das empresas BrasilAgro e Boa Safra*. Trabalho acadêmico, Universidade de Brasília, Departamento de Estatística. PDF fornecido pelo usuário, em `referencias/Carolyne.pdf`; ano não verificado.
 - Fisher, R. A.; Tippett, L. H. C. (1928). *On the estimation of the frequency distributions of the largest or smallest member of a sample*. Proceedings of the Cambridge Philosophical Society, 24(2), 180–190. Referência presente no trabalho fornecido.
 - Ljung, G. M.; Box, G. E. P. (1978). *On a measure of lack of fit in time series models*. Biometrika, 65(2), 297–303. Referência presente no trabalho fornecido.
@@ -489,83 +463,17 @@ if(!is.null(retornos$condicional)) mostrar(retornos$condicional[,.(anos,referenc
 
 Esses quantis mantêm a covariável na data de referência; não representam uma trajetória futura de atividade solar. Seus intervalos delta não são a faixa bootstrap histórica e não incorporam dependência ou incerteza dessa trajetória.
 
-## Estimação e diagnósticos complementares da Skew-t {#ap-skew .unnumbered}
+## Sensibilidade da GEV {#ap-sensibilidade .unnumbered}
 
-As funções `sn::dst`, `sn::pst` e `sn::qst` fornecem densidade, distribuição e quantis. A estimação usa `sn::st.mple(penalty=NULL)`, com oito conjuntos iniciais e dois métodos (`nlminb` e Nelder–Mead), sem truncar a distribuição em zero, tomar logaritmos da resposta ou impor um teto conveniente de assimetria. A mesma mediana é usada no reescalonamento numérico de ambas as famílias. A log-verossimilhança em W/m² inclui a correção pelo Jacobiano, $\ell_X=\ell_{X/s}-n\log s$, e é conferida pela densidade na unidade original.
-
-```{r}
-#| label: tbl-amostra-comum
-mostrar(skew_t$resumo_amostra[,.(n,primeiro,ultimo,minimo,mediana,maximo,invalidos)],
- 'Amostra comum da GEV e Skew-t: datas de início dos blocos e fluxos em W/m².')
-```
-
-O objeto `skew_t$amostra_comum` é confrontado em valores, datas, quantidade, ordem, positividade e finitude com os máximos efetivamente usados pela GEV. Divergência interrompe a execução; não há seleção silenciosa.
+O ajuste principal mantém todos os máximos elegíveis. Variações de cobertura e retiradas de um ou três maiores máximos são apenas diagnósticas, não critérios para excluir dados.
 
 ```{r}
-#| label: tbl-parametros-skew
-mostrar(skew_t$ajuste$parametros,'Skew-t DP: parâmetros na unidade original. Traços em EP/IC indicam inferência de Wald não validada, não erro zero.')
+#| label: tbl-sensibilidade-gev
+mostrar(modelos$sensibilidade[bloco==principal,.(variacao,n,mu,sigma,xi,delta_xi)],
+ 'Sensibilidade da GEV mensal: localização e escala em W/m²; forma e sua diferença adimensionais.')
 ```
 
-Localização e escala não são média e desvio-padrão. A média exige $\nu>1$ e a variância $\nu>2$. Nesta solução com $\nu<1$, a média do modelo não existe, o que não demonstra uma propriedade física solar. A massa estimada em fluxos não positivos é `r sci(skew_t$massa_nao_positiva)`; o suporte original da Skew-t é toda a reta.
-
-A tentativa selecionada é a `r skew_t$ajuste$selecionada`; convergência numérica: **`r skew_t$ajuste$convergiu`**; solução interior regular: **`r skew_t$ajuste$regular`**; fronteira sinalizada por `sn`: **`r skew_t$ajuste$fronteira`**. `r paste(skew_t$ajuste$avisos,collapse=' ')`
-
-```{r}
-#| label: tbl-otimizacao-mensagens
-ot<-skew_t$ajuste$tentativas
-mostrar(ot[,.(metodo,codigo,mensagem,avisos)][,.(tentativas=.N),by=.(metodo,codigo,mensagem,avisos)],
- 'Códigos e mensagens das tentativas principais. Código zero é término numérico, não identificabilidade; todas as tentativas em otimizacao_skew_t.csv.')
-```
-
-Não se apagam tentativas malsucedidas. O parâmetro de assimetria cresce muitas ordens de magnitude com pouca mudança de verossimilhança. A solução selecionada aproxima uma fronteira, não um máximo interior com precisão demonstrada; seus dígitos não representam estabilidade inferencial.
-
-```{r}
-#| label: fig-densidade-comparada
-#| fig-cap: "Distribuição mensal empírica e curvas GEV/Skew-t visualizadas em log10. A densidade por unidade de log10 usa o Jacobiano correto."
-imagens('comparacao_densidade')
-```
-
-As curvas são de densidade de log10 do fluxo apenas para apresentação, com $f_Z(z)=\ln(10)10^z f_X(10^z)$; os modelos foram ajustados na escala original. Aparência central favorável não valida a cauda.
-
-```{r}
-#| label: fig-qq-skew
-#| fig-cap: "QQ da Skew-t na amostra mensal; eixos log10 e diagonal de igualdade. A cauda teórica excede fortemente os maiores máximos."
-imagens('comparacao_qq_skew_t')
-```
-
-Na posição do maior ponto, o quantil Skew-t é `r sci(skew_t$metricas[modelo=='Skew-t',quantil_maior_ponto])` W/m², ainda mais distante do máximo observado do que a GEV. AIC e BIC são calculados como $-2\ell+2k$ e $-2\ell+k\log n$, com três parâmetros GEV e quatro Skew-t; a não regularidade e a dependência limitam sua leitura clássica.
-
-```{r}
-#| label: tbl-equivalentes-skew
-mostrar(skew_t$equivalentes[,.(anos,probabilidade,GEV,Skew_t)],
- 'GEV: níveis formais. Skew-t: quantis equivalentes em p = 1 - 1/(12T), em W/m²; não são níveis de retorno TVE validados.')
-```
-
-O quantil Skew-t equivalente a dez anos é `r sci(skew_t$equivalentes[anos==10,Skew_t])` W/m², `r round(skew_t$equivalentes[anos==10,razao_Skew_t_maximo])` vezes o máximo observado. Não substitui o nível GEV e não recebe um IC artificial numa solução não regular.
-
-## Sensibilidade aos maiores máximos {#ap-sensibilidade .unnumbered}
-
-As amostras completa, sem o maior e sem os três maiores usam as mesmas datas e valores para ambas as famílias em cada cenário. Exclusões são diagnósticas, com desempate determinístico pela data; nenhuma é usada para escolher artificialmente o ajuste final.
-
-```{r}
-#| label: tbl-sensibilidade-criterios-skew
-mostrar(skew_t$sensibilidade[,.(cenario,modelo,n,logLik,AIC,BIC)],
- 'Critérios por cenário, em W/m². Compare famílias dentro do cenário, não AIC absoluto entre amostras diferentes.')
-```
-
-```{r}
-#| label: tbl-sensibilidade-parametros-skew
-mostrar(skew_t$sensibilidade[,.(cenario,modelo,localizacao,escala,xi_GEV,alpha_ST,nu_ST)],
- 'Parâmetros nas sensibilidades; localização/escala em W/m², demais parâmetros adimensionais.')
-```
-
-```{r}
-#| label: tbl-sensibilidade-diagnosticos-skew
-mostrar(skew_t$sens_diagnosticos[,.(cenario,delta_AIC,delta_BIC,rmse_pp_GEV,rmse_pp_ST,P99_GEV,P99_ST)],
- 'Diferenças Skew-t menos GEV, RMSE do PP e P99 em W/m². Diferenças positivas dos critérios favorecem GEV.')
-```
-
-As diferenças de critérios continuam positivas, mas a magnitude de P99 muda ao retirar extremos. A Skew-t permanece na fronteira em todos os cenários. Assim, estabilidade da preferência relativa não implica estabilidade de parâmetros ou validade de extrapolação. Sensibilidades de cobertura (80%, 90%, 95%) e da forma GEV permanecem em `sensibilidade_cobertura.csv` e `sensibilidade_ajustes.csv`.
+A maior variação absoluta da forma foi `r round(max(abs(modelos$sensibilidade[bloco==principal,delta_xi]),na.rm=TRUE),3)`. As formas continuam elevadas nos cenários examinados; estabilidade relativa à retirada de poucos picos não garante adequação de uma distribuição global à heterogeneidade temporal. Os resultados completos permanecem em `sensibilidade_ajustes.csv` e `sensibilidade_cobertura.csv`.
 
 ## Episódios e reprodutibilidade {#ap-reproducao .unnumbered}
 
@@ -578,7 +486,7 @@ As citações abaixo identificam as implementações utilizadas.
 ```{r}
 #| label: citacoes-pacotes
 #| results: asis
-for(p in c('ncdf4','data.table','ggplot2','evd','sn','numDeriv','knitr')) {
+for(p in c('ncdf4','data.table','ggplot2','evd','knitr')) {
   cat('\n\n**Pacote ',p,'**\n\n',paste(format(utils::citation(p),style='text'),collapse='\n'),'\n',sep='')
 }
 ```

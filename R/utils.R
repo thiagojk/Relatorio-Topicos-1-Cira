@@ -1,4 +1,4 @@
-necessarios <- c('ncdf4', 'data.table', 'ggplot2', 'evd', 'knitr', 'sn', 'numDeriv')
+necessarios <- c('ncdf4', 'data.table', 'ggplot2', 'evd', 'knitr')
 faltam <- necessarios[!vapply(necessarios, requireNamespace, logical(1), quietly = TRUE)]
 if (length(faltam)) stop('Instale: ', paste(faltam, collapse = ', '))
 library(data.table)

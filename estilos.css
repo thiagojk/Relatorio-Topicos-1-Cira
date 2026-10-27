@@ -29,3 +29,5 @@ main span[id^="eq-"] { display: block; max-width: 100%; overflow-x: auto; }
     white-space: normal; overflow-wrap: anywhere;
   }
 }
+
+.downloads-relatorio { display: flex; flex-wrap: wrap; gap: .75rem; margin-bottom: 1.5rem; }
