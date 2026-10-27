@@ -20,3 +20,12 @@ table th { white-space: normal; }
 
 /* Textos longos dos registros numéricos devem caber na página. */
 #tbl-otimizacao-mensagens td { white-space: normal; overflow-wrap: anywhere; }
+
+/* Fórmulas e identificadores não ampliam a página em telas estreitas. */
+main p code, main li code { overflow-wrap: anywhere; white-space: normal; }
+main span[id^="eq-"] { display: block; max-width: 100%; overflow-x: auto; }
+@media (max-width: 600px) {
+  #tbl-descritiva td:first-child, #tbl-descritiva td:last-child {
+    white-space: normal; overflow-wrap: anywhere;
+  }
+}

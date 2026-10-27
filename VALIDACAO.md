@@ -1,6 +1,6 @@
 # Validação da análise com a base real GOES-16
 
-Validação original em 22 de outubro de 2026; comparação Skew-t executada em 23 de outubro de 2026. Este registro descreve os resultados efetivamente executados com o arquivo real; a validação técnica artificial é separada.
+Validação original em 22 de outubro de 2026; comparação Skew-t executada em 23 de outubro de 2026; reestruturação didática e novas versões em 27 de outubro de 2026 (registro ao final). Este registro descreve os resultados efetivamente executados com o arquivo real; a validação técnica artificial é separada.
 
 ## Base utilizada
 
@@ -260,3 +260,58 @@ Auditoria OOXML confirmou as 42 figuras científicas originais incorporadas sem 
 Conversão de inspeção pelo LibreOfficeDev 26.8 produziu 43 páginas A4. Foram rasterizadas todas as páginas, verificadas as posições dos elementos e inspecionadas visualmente capa, tabelas, gráficos, fórmulas e conclusão. Não houve conteúdo fora da página; a paginação poderá variar no Microsoft Word, que não foi executado neste ambiente. O sumário depende da atualização de campos pelo editor e não está preenchido na prévia do LibreOffice. A prévia PDF foi criada apenas em `/tmp`, sem substituir o PDF acadêmico existente.
 
 Hashes SHA256 antes/depois confirmaram preservação byte a byte de `relatorio.pdf`, `docs/index.html`, todos os scripts científicos em `R/`, CSVs e PNGs. O pipeline foi executado pela renderização; não houve alteração de métodos nem de resultados. Não foi necessário repetir testes estatísticos para esta mudança exclusivamente de formato. O NetCDF continua fora do Git.
+
+## Reestruturação didática — 27/10/2026
+
+### Leitura prévia e adaptação da referência
+
+Foram examinados o PDF `referencias/Carolyne.pdf`, o QMD anterior, README, este registro, todos os módulos R e os CSVs/RDS já produzidos, antes das alterações. Não há código-fonte separado da Carolyne no checkout: a análise da referência se limita ao PDF disponível, sem atribuir a ele uma implementação não acessível.
+
+- **Tabela 2:** adaptada a ideia de um resumo descritivo antes da modelagem, incluindo quartis, dispersão, CV, assimetria e curtose do fluxo válido. Esses valores já existiam em `exploratoria$descritiva`; não foram inventados nem calculados em uma amostra visual.
+- **Figura 2:** adaptada a sequência histograma + série histórica. Histograma mantém a amostra visual determinística de 20 mil minutos. A série usa um envelope mínimo–máximo e mediana por hora sobre todos os minutos válidos, com horas vazias na grade. O total de contribuições e a preservação do maior/menor fluxo são verificados.
+- **Figura 8:** sua função é diagnosticar caudas por quantis teóricos de Gumbel. Aqui priorizou-se o QQ da GEV efetivamente ajustada e o PP, sem classificar automaticamente o domínio pela curvatura contra Gumbel.
+- **Não transferidos:** Figura 3/log-retornos, VaR, preços, alfa-estável e interpretações financeiras. O objeto continua sendo magnitude do fluxo XRS-B, sem identificar fisicamente flares.
+
+### Estrutura e produtos de apresentação
+
+O corpo principal agora tem Introdução, Referencial teórico, Dados e metodologia, Análise descritiva, Resultados (seis subseções), Discussão, Conclusão e Referências. Contém **sete tabelas e onze figuras** selecionadas; com o apêndice, são **23 tabelas e 14 figuras**, em vez de 37 e 42 anteriormente.
+
+Otimização, contabilidade de flags, dependência detalhada, incerteza complementar, quantis condicionais/equivalentes e sensibilidades ficaram no apêndice ou nos arquivos de resultados. Reduziram-se repetições, múltiplos histogramas/boxplots equivalentes, QQ Normal e diagnósticos de todas as agregações no texto. Esses produtos continuam a ser calculados e exportados, sem retirar análise do pipeline.
+
+`R/08_apresentacao.R`, integrado a `R/executar.R`, deriva seis tabelas: descritiva limpa, comparação de blocos, GEV com IC bootstrap, níveis de retorno, comparação conjunta GEV × Skew-t e comparação temporal em W/m². Exporta os CSVs `descritiva_relatorio`, `blocos_relatorio`, `gev_relatorio`, `retornos_relatorio`, `comparacao_relatorio` e `estacionariedade_relatorio`. Não realiza novos ajustes nem sorteios.
+
+Três novas figuras: `serie_fluxo_horaria.png`, `maximos_comparados.png` e `mensais_destaque.png`. O último gráfico usa exatamente os 94 máximos da amostra comum, destaca os três maiores e identifica seus meses, não datas de erupções físicas. O envelope horário é um resumo visual de todos os minutos; não se afirma que é uma curva desenhada na resolução original de um minuto. A grade conserva horas/blocos ausentes, sem aproximá-los como períodos adjacentes.
+
+A comparação temporal é reconvertida somente na apresentação para W/m², aplicando o mesmo Jacobiano aos dois modelos. Os critérios originais permanecem no CSV anterior. As diferenças de AIC, o ajuste e o teste não se alteram. A tabela principal de parâmetros GEV usa os IC bootstrap já calculados; erros padrão e IC de Wald permanecem no apêndice.
+
+### Preservação científica
+
+Antes das alterações foram guardados hashes dos 100 arquivos R/CSV/PNG anteriores e cópias dos dois RDS científicos. Após as renderizações reais:
+
+- `all.equal` confirmou igualdade integral de `resultados/resumo.rds` e `resultados/comparacao_skew_t.rds` com o estado anterior;
+- todos os CSVs e PNGs anteriores são idênticos byte a byte;
+- módulos estatísticos `R/01_*` a `R/07_*`, `R/config.R` e `R/utils.R` não foram alterados; somente o executor recebeu o módulo de apresentação;
+- amostra, forma GEV 2,771987, bootstrap, níveis de retorno, logLik/AIC/BIC, solução Skew-t de fronteira e conclusões são os mesmos;
+- nenhuma exclusão adicional de extremos, transformação em log-retorno ou resultado artificial entrou no relatório.
+
+A conclusão foi reescrita sem mudar seu sentido: GEV relativamente melhor que a Skew-t considerada, mas ambas mal calibradas na cauda superior; a localização linear não resolve a heterogeneidade; extrapolação prospectiva não foi validada. As referências acadêmicas do projeto foram mantidas e citadas no texto. Não se acrescentou bibliografia externa não verificada.
+
+### Execução e inspeção das versões
+
+- `Rscript testes/testar.R`: status 0. Fixture em `/tmp/goes_TESTE_ARTIFICIAL_2e7464e1d18e`, isolada da base real. Novas asserções verificam conservação de contagem/extremos pelo envelope, identidade mensal, níveis de retorno e invariância dos critérios após mudança de unidade.
+- `quarto render relatorio.qmd --to html`: status 0 com a base real; última execução após o ajuste de CSS para telas estreitas.
+- `quarto render relatorio.qmd --to pdf`: status 0 com a base real. A inspeção identificou duas figuras que ultrapassavam o rodapé; `fig-pos: H` foi adotado no formato PDF. A composição final foi validada por duas passagens XeLaTeX no LaTeX gerado, sem refazer cálculos nas iterações de diagramação.
+- `quarto render relatorio.qmd --to docx`: status 0 com a base real. Word atualizado para acompanhar a mesma reestruturação.
+- Chromium: 14 imagens incorporadas, 23 tabelas, 32 elementos MathML; zero imagens quebradas, erros JavaScript, links internos sem destino, referências não resolvidas ou placeholders. Dez tabelas foram confrontadas numericamente com os CSVs. Viewport de 1440 px sem tabelas excessivamente largas; viewport de 390 px sem transbordamento da página (tabelas largas e equação têm rolagem própria).
+- PDF: **30 páginas A4**, com 14 figuras e 23 tabelas numeradas. Todas as páginas foram rasterizadas e inspecionadas em painéis; conferidas capa, sumário, equações, tabelas, gráficos, conclusão e apêndice. Nenhum texto/imagem fora das margens úteis e nenhum corte de legenda. Zero `Overfull`, caracteres ausentes, referências indefinidas ou `Warning`; permanecem 18 avisos `Underfull` de espaçamento, sem cortes ou sobreposições.
+- 230 valores numéricos distintos das tabelas HTML foram encontrados no texto PDF e no XML Word; a tabela descritiva formatada também foi confrontada integralmente com seu CSV no HTML.
+- Word: 14 imagens e 32 equações nativas. A prévia LibreOfficeDev 26.8 tem 25 páginas, com texto dentro da página. A paginação pode variar no Microsoft Word, não executado nesta máquina; o sumário automático deve ser atualizado ao abrir. A prévia foi criada em `/tmp` e não substitui o PDF acadêmico.
+- `docs/index.html` recebeu cópia byte a byte do HTML final. A estrutura Pages `main` + `/docs` permanece a mesma; HTML continua sendo o formato padrão.
+
+### Artefatos desta versão
+
+- `docs/index.html`: 3180647 bytes; SHA256 `855321ed49a67033957af69bd998e4daff7bb196e42af154a328ba29c4fea168`.
+- `relatorio.pdf`: 1689726 bytes; SHA256 `fd06bc67c9461e6df76ae11edff48d09a831ac2f2e3b17c98a9061e30daff9b6`.
+- `relatorio.docx`: 1390526 bytes; SHA256 `f247a9f113bbf40bb6987108d34ced1b08c53cb3f4803f8ca818edcafcdbb02c`.
+
+O NetCDF continua ignorado e não é incluído no Git. Os registros de 22/23 de outubro acima são históricos; contagens e tamanhos desta seção descrevem a versão reestruturada atual.

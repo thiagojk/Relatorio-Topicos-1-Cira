@@ -141,6 +141,15 @@ stopifnot(all(skew_t$sensibilidade[,uniqueN(n),by=cenario]$V1==1L),
   all(is.finite(skew_t$sensibilidade$logLik)))
 # Exercita identificação de fronteira: a amostra real não entra no teste artificial.
 if(skew_t$ajuste$fronteira)stopifnot(!skew_t$ajuste$regular,all(is.na(skew_t$ajuste$parametros$ep)))
+# Apresentação: envelope usa todos os minutos e conserva extremos; mesma amostra.
+stopifnot(sum(apresentacao$horas$n)==nrow(dados_limpos),
+  max(apresentacao$horas$maximo,na.rm=TRUE)==max(dados_limpos$xrsb_flux),
+  min(apresentacao$horas$minimo,na.rm=TRUE)==min(dados_limpos$xrsb_flux),
+  identical(apresentacao$mensal$inicio,skew_t$amostra_comum$inicio),
+  identical(apresentacao$mensal$maximo,skew_t$amostra_comum$maximo),
+  identical(apresentacao$retornos[['Nível (W/m²)']],retornos$tabela$estimativa),
+  max(abs(diff(apresentacao$estacionariedade$AIC)-diff(modelos$comparacao_ns$AIC)))<1e-8,
+  all(abs(apresentacao$comparacao$AIC-skew_t$criterios$AIC)<1e-8))
 cat('\nTESTES TÉCNICOS PASSARAM. Dados ARTIFICIAIS, sem interpretação solar.\n')
 cat('DIRETORIO_TESTE=',local_teste,'\n',sep='')
 writeLines(local_teste,file.path(raiz,'testes/ultimo_diretorio.txt'))

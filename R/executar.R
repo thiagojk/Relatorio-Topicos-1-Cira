@@ -1,7 +1,7 @@
 # Executar a partir da raiz do projeto; relatorio.qmd usa exatamente esta rotina.
 source('R/config.R')
 source('R/utils.R')
-for(arq in c('01_leitura_limpeza','02_exploratoria','03_dependencia','04_block_maxima','05_gev','06_niveis_retorno','07_skew_t'))
+for(arq in c('01_leitura_limpeza','02_exploratoria','03_dependencia','04_block_maxima','05_gev','06_niveis_retorno','07_skew_t','08_apresentacao'))
   source(file.path('R',paste0(arq,'.R')))
 message('1/7 — Leitura e controle de qualidade')
 base <- ler_xrs(config$arquivo)
@@ -19,6 +19,7 @@ message('6/7 — Incerteza, retornos e episódios separados')
 retornos <- retornos_eventos(base,exploratoria,block,modelos)
 message('7/7 — Skew-t na mesma amostra mensal e comparação descritiva')
 skew_t <- comparar_skew_t(block,modelos,retornos)
+apresentacao <- apresentar_resultados(base,exploratoria,block,modelos,retornos,skew_t)
 # Não serializar as bases de milhões de linhas nem os objetos ggplot com seus dados.
 resumo <- list(arquivo=basename(config$arquivo),md5=base$md5,n_total=nrow(dados_xrs),
   n_validos=nrow(dados_limpos),inicio=min(dados_xrs$data_hora),fim=max(dados_xrs$data_hora),

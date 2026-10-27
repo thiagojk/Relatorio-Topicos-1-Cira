@@ -28,6 +28,20 @@ git push origin HEAD:main
 
 O Pages publica novamente após o envio. A cópia em `docs/` representa a análise já renderizada; alterações apenas no código R ou no QMD não a atualizam automaticamente.
 
+## Estrutura didática do relatório
+
+A versão reestruturada apresenta **Introdução → Referencial teórico → Dados e metodologia → Análise descritiva → Resultados → Discussão → Conclusão → Referências**. O corpo principal prioriza tabelas resumidas, gráficos selecionados e interpretação. Controle de qualidade detalhado, otimização Skew-t, sensibilidades e informações de sessão continuam disponíveis no apêndice, nos scripts e em `VALIDACAO.md`.
+
+Do trabalho de Carolyne foram adaptadas a tabela descritiva, a combinação histograma/série histórica e a função dos diagnósticos por quantis. O repositório contém o PDF dela, sem código-fonte separado. Não foram transferidos log-retornos, VaR ou alfa-estável. A GEV e a Skew-t continuam ajustadas ao fluxo original, sem excluir os maiores máximos.
+
+Novos produtos de apresentação, derivados dos resultados atuais, em `R/08_apresentacao.R`:
+
+- tabela descritiva enxuta, comparação dos calendários, GEV com IC bootstrap, níveis de retorno e comparação conjunta GEV × Skew-t;
+- série histórica com envelope mínimo–máximo e mediana por hora, usando todos os minutos válidos e conservando os picos; não é uma série minuto a minuto desenhada sem agregação;
+- comparação temporal dos três calendários e gráfico da amostra mensal com os três maiores destacados.
+
+As saídas anteriores continuam sendo calculadas e exportadas. `tabelas/*_relatorio.csv`, `serie_horaria_visual.csv` e os novos PNGs são reproduzíveis e permanecem ignorados pelo Git. A conversão dos critérios de estacionariedade para W/m² no relatório é apenas apresentação; preserva as diferenças de AIC e torna a unidade coerente com a comparação GEV × Skew-t.
+
 ## Estado atual
 
 A análise foi executada com a **base real GOES-16**, disponível localmente em `Dados/`, e o relatório é gerado por Quarto. A validação e o registro dos resultados estão em `VALIDACAO.md`.
@@ -84,7 +98,7 @@ quarto install tinytex
 
 Instale também as fontes **DejaVu Serif**, **DejaVu Sans**, **DejaVu Sans Mono** e **Latin Modern Math**, usadas na configuração. Os pacotes LaTeX de apresentação incluem `tcolorbox`, `fvextra`, `seqsplit`, `needspace`, `placeins`, `microtype`, `longtable` e `booktabs`; com TinyTeX, o Quarto pode instalar dependências faltantes conforme o acesso à rede.
 
-A configuração PDF está em `relatorio.qmd`; os arquivos de `formatos/` cuidam exclusivamente da impressão: capa, margens, tabelas com quebra de texto, cabeçalhos repetidos e reserva de espaço para tabelas curtas, quadro de advertência sem ícone e quebra de identificadores longos. Figuras mantêm os PNGs originais e suas proporções, em blocos independentes. Código permanece oculto. O HTML conserva seu tema e suas tabelas originais.
+A configuração PDF está em `relatorio.qmd`; os arquivos `formatos/pdf-*` e `formatos/tabelas_pdf.R` cuidam exclusivamente da impressão: capa, margens, tabelas com quebra de texto, cabeçalhos repetidos e reserva de espaço para tabelas curtas, quadro de advertência sem ícone e quebra de identificadores longos. Figuras mantêm os PNGs originais e suas proporções, em blocos independentes. Código permanece oculto. O HTML conserva seu tema e suas tabelas originais.
 
 O PDF final é versionado; `.tex`, `.aux`, `.log`, `.toc` e demais intermediários de `relatorio` são ignorados. Sempre regenere `relatorio.pdf` após uma mudança científica no QMD ou nos scripts. Atualizar somente HTML não atualiza automaticamente o PDF.
 
@@ -106,6 +120,7 @@ O modelo já acompanha o repositório. Para recriá-lo opcionalmente, use `pytho
 - `R/05_gev.R`: múltiplos inícios de otimização, comparação de blocos e extensão temporal.
 - `R/06_niveis_retorno.R`: IC por bootstrap móvel, níveis de retorno e episódios separados.
 - `R/07_skew_t.R`: validação da amostra comum, estimação Skew-t, múltiplos inícios, comparação GEV × Skew-t, diagnósticos e influência dos maiores máximos.
+- `R/08_apresentacao.R`: resumos e figuras didáticas derivados dos mesmos dados e ajustes, sem modificar a metodologia.
 - `R/executar.R`: execução integral compartilhada com o relatório.
 - `figuras/`, `tabelas/`, `resultados/`: saídas geradas, ignoradas no Git.
 - `referencias/Carolyne.pdf`: referência fornecida, sem reprodução literal de seu texto.
