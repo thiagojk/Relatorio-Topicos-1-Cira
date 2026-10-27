@@ -88,7 +88,7 @@ O QMD inclui botões HTML com `href="relatorio.pdf"` e `href="relatorio.docx"`. 
 
 O script recusa saídas ausentes, com assinatura de formato inválida ou mais antigas que os fontes. Nomes e maiúsculas coincidem com os arquivos. `.gitignore` permite versionar os dois downloads. Links relativos independem do domínio e não apontam para a raiz local nem para páginas de visualização do GitHub. HTML padrão, PDF/DOCX na raiz e estrutura `/docs` são preservados.
 
-## Validação da execução atual
+## Validação anterior — reorganização e downloads
 
 - `Rscript testes/testar.R`: status 0; fixture isolada em `/tmp/goes_TESTE_ARTIFICIAL_3133458d55947`.
 - `quarto render relatorio.qmd --to html`, `--to pdf` e `--to docx`: todos concluídos com a base real, sem erros.
@@ -102,7 +102,7 @@ O script recusa saídas ausentes, com assinatura de formato inválida ou mais an
 - Teste Chromium dos dois botões em servidor local com prefixo `/Relatorio-Topicos-1-Cira/`: downloads efetivos concluídos, resposta HTTP 200 para ambos; tipos `application/pdf` e `application/vnd.openxmlformats-officedocument.wordprocessingml.document`; bytes baixados iguais aos originais. Isso valida a estrutura final do Pages, sem depender de caminhos locais ou da visualização `blob` do GitHub.
 - `bash -n` aprovou os scripts de instalação e geração/publicação. O novo `scripts/renderizar_publicar.sh` executa as três renderizações sequencialmente e só então prepara `docs/`, interrompendo em falhas.
 
-### Arquivos publicados
+### Arquivos publicados na atualização anterior
 
 
 - `docs/index.html`: 2801499 bytes; SHA256 `c33c46f1933e70a2ddeb9c1bcc1810cb3a779b302952bb2e8f745ed05f54b860`.
@@ -112,3 +112,37 @@ O script recusa saídas ausentes, com assinatura de formato inválida ou mais an
 - `docs/relatorio.docx`: 1140264 bytes; SHA256 `277ff7a1e9f8a88fe25e4d192a4fbc317cf23685382bd08fa213bcaad703c630`.
 
 O NetCDF não é versionado. A implantação remota depende da execução padrão do Pages após o push; os testes HTTP descritos foram executados localmente sobre a pasta final publicada.
+
+## Tabela resumida de níveis de retorno — 27/10/2026
+
+A tabela já existente `tbl-retornos` foi revisada, sem duplicação, na seção **4.6 — Níveis de retorno**, dentro de Resultados e antes do gráfico. A apresentação tem três colunas: período, estimativa em W/m² e IC 95% `(inferior; superior)`, em notação científica com quatro algarismos significativos e vírgula decimal. O resumo vem diretamente de `retornos$tabela`, por `R/08_apresentacao.R`, com o helper `mostrar()` já existente. Exporta-se também `retornos_resumo_relatorio.csv`; os CSVs numéricos anteriores são preservados.
+
+| Período | Estimativa (W/m²) | IC 95% (W/m²) |
+|---|---:|---|
+| 1 ano | 2,576e-03 | (4,208e-04; 9,815e-03) |
+| 2 anos | 1,870e-02 | (1,222e-03; 1,019e-01) |
+| 5 anos | 2,457e-01 | (4,057e-03; 2,556e+00) |
+| 10 anos | 1,698e+00 | (9,712e-03; 2,651e+01) |
+
+Os horizontes existentes são 1, 2, 5 e 10 anos, equivalentes a 12, 24, 60 e 120 blocos mensais, com probabilidade de não excedência `1 - 1/(12T)`. Não foram criados horizontes de 20/50 anos. Os IC principais continuam sendo percentis de 2,5% e 97,5% do **bootstrap circular de blocos móveis**, com 399 replicações válidas, segmentos de cinco meses e lacunas preservadas. Nenhum IC da Hessiana os substituiu.
+
+### Conferências e preservação
+
+- Revisados QMD, módulos `05`, `06`, `08`, README e esta validação antes da edição. Não houve alteração em `R/05_gev.R`, `R/06_niveis_retorno.R`, seleção de blocos, cobertura, semente ou método de bootstrap.
+- Auditoria independente com os parâmetros GEV na unidade original reproduziu as quatro estimativas. Os limites coincidem com os percentis das colunas T1/T2/T5/T10 de `bootstrap_blocos_moveis.csv`. Todos são finitos, ordenados e contêm a respectiva estimativa; a unidade é W/m² e os níveis crescem com o período. **Não foi encontrada inconsistência numérica nos cálculos existentes.**
+- `all.equal` confirmou que o RDS científico completo permanece idêntico ao anterior. Hashes confirmaram preservação dos módulos `01`–`06`, de todos os CSVs numéricos anteriores e de todos os PNGs, inclusive `niveis_retorno.png`.
+- `Rscript testes/testar.R`: aprovado em fixture temporária isolada. Uma conferência adicional avaliou diretamente os dados do gráfico produzido pelo módulo: curva e faixa reproduzem os quantis do mesmo ajuste e os percentis das mesmas replicações bootstrap em todos os nós da grade gráfica. Os horizontes da tabela não precisam coincidir com todos os nós da grade logarítmica do gráfico; a função e as replicações são as mesmas.
+- `bash scripts/renderizar_publicar.sh`: concluído com a base real, gerando HTML, PDF e DOCX e preparando `docs/`.
+- HTML: uma única tabela de retorno, quatro linhas, igualdade com o CSV de apresentação e concordância numérica com os valores completos dentro do arredondamento. Sem imagens quebradas ou referências internas não resolvidas; inspecionada em 1440 px e 390 px, sem transbordamento da página.
+- PDF: 25 páginas; tabela completa na página 14, inspecionada visualmente, com seus 12 valores numéricos presentes. Sem corte de linhas/colunas na tabela. Nota bootstrap e interpretação acompanham a tabela antes do gráfico.
+- Word: uma única tabela nativa com as quatro linhas e os mesmos textos do HTML. Prévia LibreOffice com 19 páginas; tabela e gráfico na página 11, inspecionados visualmente. A paginação no Microsoft Word pode variar.
+- A nota identifica o bootstrap e a conversão temporal. O parágrafo interpretativo explicita crescimento dos quantis e cauda excessivamente pesada: os níveis são formais, **não previsões solares confiáveis**. A conclusão científica foi preservada.
+- As cópias em `docs/` são idênticas às saídas da raiz. Os botões PDF/Word foram novamente exercitados em servidor local com o prefixo do projeto, com downloads corretos e resposta HTTP 200.
+
+### Arquivos atuais
+
+- `docs/index.html`: 2802164 bytes; SHA256 `8b836ea0e1544f6e33ee170699d576b328e4c3d39d1680f3be3edb157dc013ba`.
+
+- `docs/relatorio.pdf`: 1428090 bytes; SHA256 `7cce3a5e5a4e815e824649f7091eb08e204d1228f8c9b6a10a6790bae4ef0233`.
+
+- `docs/relatorio.docx`: 1140553 bytes; SHA256 `2dd6193c969d4a1b1b66e9c93dcd5edccf273c7078ddbcc13e69a22a4dbfe01c`.

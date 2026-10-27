@@ -54,6 +54,10 @@ Os links `relatorio.pdf` e `relatorio.docx` funcionam a partir da URL do projeto
 
 O projeto contém dados solares. BrasilAgro/Boa Safra, VaR, mínimos financeiros, alfa-estável e estimação PWM pertencem à referência e não foram implementados para esta base; não foram acrescentados resultados financeiros. O QQ Normal existente foi preservado e reapresentado como diagnóstico, sem alegar um ajuste que não foi realizado.
 
+## Tabela principal de níveis de retorno
+
+Na seção **Resultados → Níveis de retorno**, a tabela apresenta os horizontes já existentes de **1, 2, 5 e 10 anos**, estimativa e IC 95% em uma coluna `(inferior; superior)`, em W/m² e notação científica. Os intervalos são percentis do bootstrap circular de blocos móveis original, sem substituir pela Hessiana nem acrescentar horizontes. `R/08_apresentacao.R` apenas formata os valores de `retornos$tabela`; os números completos continuam em `niveis_retorno.csv` e `retornos_relatorio.csv`, e o resumo em `retornos_resumo_relatorio.csv`. A advertência de inadequação da cauda permanece imediatamente após a tabela.
+
 ## Estado atual
 
 A análise foi executada com a **base real GOES-16**, disponível localmente em `Dados/`, e o relatório é gerado por Quarto. A validação e o registro dos resultados estão em `VALIDACAO.md`.

@@ -2645,44 +2645,39 @@ Figura 8: PP da GEV mensal: probabilidades empíricas versus probabilidades do 
 <div id="tbl-retornos" class="cell quarto-float quarto-figure quarto-figure-center anchored">
 <figure class="quarto-float quarto-float-tbl figure">
 <figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-retornos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
-Tabela 4: Níveis formais de retorno da GEV mensal e IC percentil nominal de 95% por bootstrap móvel. Níveis e limites em W/m²; não são previsões solares validadas.
+Tabela 4: Níveis de retorno do fluxo solar XRS-B estimados pela GEV, com intervalos de confiança de 95%.
 </figcaption>
 <div aria-describedby="tbl-retornos-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
 <div class="cell-output-display">
 <table class="do-not-create-environment cell caption-top table table-sm table-striped small">
-<caption>Níveis formais de retorno da GEV mensal e IC percentil nominal de 95% por bootstrap móvel. Níveis e limites em W/m²; não são previsões solares validadas.</caption>
+<caption>Níveis de retorno do fluxo solar XRS-B estimados pela GEV, com intervalos de confiança de 95%.</caption>
 <thead>
 <tr class="header">
-<th style="text-align: left;">Período (anos)</th>
-<th style="text-align: left;">Nível (W/m²)</th>
-<th style="text-align: left;">IC inferior</th>
-<th style="text-align: left;">IC superior</th>
+<th style="text-align: left;">Período de retorno</th>
+<th style="text-align: left;">Estimativa (W/m²)</th>
+<th style="text-align: left;">IC 95% (W/m²)</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td style="text-align: left;">1</td>
-<td style="text-align: left;">0.002576</td>
-<td style="text-align: left;">4.208e-04</td>
-<td style="text-align: left;">0.009815</td>
+<td style="text-align: left;">1 ano</td>
+<td style="text-align: left;">2,576e-03</td>
+<td style="text-align: left;">(4,208e-04; 9,815e-03)</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">2</td>
-<td style="text-align: left;">0.0187</td>
-<td style="text-align: left;">0.001222</td>
-<td style="text-align: left;">0.1019</td>
+<td style="text-align: left;">2 anos</td>
+<td style="text-align: left;">1,870e-02</td>
+<td style="text-align: left;">(1,222e-03; 1,019e-01)</td>
 </tr>
 <tr class="odd">
-<td style="text-align: left;">5</td>
-<td style="text-align: left;">0.2457</td>
-<td style="text-align: left;">0.004057</td>
-<td style="text-align: left;">2.556</td>
+<td style="text-align: left;">5 anos</td>
+<td style="text-align: left;">2,457e-01</td>
+<td style="text-align: left;">(4,057e-03; 2,556e+00)</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">10</td>
-<td style="text-align: left;">1.698</td>
-<td style="text-align: left;">0.009712</td>
-<td style="text-align: left;">26.51</td>
+<td style="text-align: left;">10 anos</td>
+<td style="text-align: left;">1,698e+00</td>
+<td style="text-align: left;">(9,712e-03; 2,651e+01)</td>
 </tr>
 </tbody>
 </table>
@@ -2691,6 +2686,8 @@ Tabela 4: Níveis formais de retorno da GEV mensal e IC percentil nominal de 95
 </figure>
 </div>
 </div>
+<p><strong>Nota:</strong> IC percentis de 95% obtidos por <strong>bootstrap circular de blocos móveis</strong>, na grade mensal com lacunas preservadas. Os limites estão na mesma unidade da estimativa (W/m²); não são os intervalos da Hessiana. Foram mantidos os horizontes já calculados: 1, 2, 5 e 10 anos, correspondentes a 12, 24, 60 e 120 blocos mensais.</p>
+<p>Os níveis de retorno aumentam com o período, pois representam quantis progressivamente mais extremos da GEV ajustada aos máximos mensais. Entretanto, os diagnósticos indicam que a GEV estacionária global produz uma cauda superior excessivamente pesada em relação aos máximos observados. Assim, estes são <strong>níveis de retorno formais do modelo estimado, não previsões solares confiáveis da intensidade de eventos futuros</strong>. A tabela e a curva seguinte utilizam o mesmo ajuste e as mesmas replicações bootstrap.</p>
 <p>O nível de um ano já é 1.76 vezes o maior fluxo observado. Não houve excedências desse nível, embora o modelo constante esperasse aproximadamente 7.8 na amostra mensal. Isso explicita a má calibração. O nível de dez anos é cerca de 1.160 vezes o máximo da base e extrapola uma janela observada de pouco mais de oito anos.</p>
 <div class="cell">
 <div class="cell-output-display">

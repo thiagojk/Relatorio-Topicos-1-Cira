@@ -300,9 +300,13 @@ Os níveis formais aumentam rapidamente com o período de retorno. São resultad
 
 ```{r}
 #| label: tbl-retornos
-mostrar(apresentacao$retornos,
- 'Níveis formais de retorno da GEV mensal e IC percentil nominal de 95% por bootstrap móvel. Níveis e limites em W/m²; não são previsões solares validadas.')
+mostrar(apresentacao$retornos_resumo,
+ 'Níveis de retorno do fluxo solar XRS-B estimados pela GEV, com intervalos de confiança de 95%.')
 ```
+
+**Nota:** IC percentis de 95% obtidos por **bootstrap circular de blocos móveis**, na grade mensal com lacunas preservadas. Os limites estão na mesma unidade da estimativa (W/m²); não são os intervalos da Hessiana. Foram mantidos os horizontes já calculados: 1, 2, 5 e 10 anos, correspondentes a 12, 24, 60 e 120 blocos mensais.
+
+Os níveis de retorno aumentam com o período, pois representam quantis progressivamente mais extremos da GEV ajustada aos máximos mensais. Entretanto, os diagnósticos indicam que a GEV estacionária global produz uma cauda superior excessivamente pesada em relação aos máximos observados. Assim, estes são **níveis de retorno formais do modelo estimado, não previsões solares confiáveis da intensidade de eventos futuros**. A tabela e a curva seguinte utilizam o mesmo ajuste e as mesmas replicações bootstrap.
 
 O nível de um ano já é `r round(retornos$tabela[anos==1,razao_maximo_observado],2)` vezes o maior fluxo observado. Não houve excedências desse nível, embora o modelo constante esperasse aproximadamente `r round(retornos$calibracao[anos==1,esperadas_modelo],1)` na amostra mensal. Isso explicita a má calibração. O nível de dez anos é cerca de `r num(round(retornos$tabela[anos==10,razao_maximo_observado]))` vezes o máximo da base e extrapola uma janela observada de pouco mais de oito anos.
 

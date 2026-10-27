@@ -31,6 +31,16 @@ apresentar_resultados <- function(base, ex, block, modelos, retornos) {
   nr <- copy(retornos$tabela[,.(anos,estimativa,inferior,superior)])
   setnames(nr,c('Período (anos)','Nível (W/m²)','IC inferior','IC superior'))
   csv(nr,'retornos_relatorio')
+  # Resumo de apresentação: mesmos horizontes, quantis e IC percentis existentes.
+  # O objeto numérico acima permanece disponível sem perda de precisão.
+  fmt_fluxo <- function(x) sub('.',',',sci(x),fixed=TRUE)
+  nr_resumo <- data.table(
+    `Período de retorno`=paste(retornos$tabela$anos,
+      ifelse(retornos$tabela$anos==1,'ano','anos')),
+    `Estimativa (W/m²)`=fmt_fluxo(retornos$tabela$estimativa),
+    `IC 95% (W/m²)`=paste0('(',fmt_fluxo(retornos$tabela$inferior),'; ',
+      fmt_fluxo(retornos$tabela$superior),')'))
+  csv(nr_resumo,'retornos_resumo_relatorio')
   # Uniformizar a unidade da comparação temporal apenas na apresentação.
   # Ambos os ajustes já existentes utilizam os mesmos dados e reescalonamento.
   ns <- copy(modelos$comparacao_ns)
@@ -93,7 +103,7 @@ apresentar_resultados <- function(base, ex, block, modelos, retornos) {
       x='Mês do bloco (UTC)',y='Máximo mensal (W/m²), eixo log10',
       caption='Destaques: três maiores máximos. Rótulos identificam o mês, não a data de um flare.'),
     'mensais_destaque')
-  list(descritiva=descritiva,blocos=blocos,parametros=pars,retornos=nr,
+  list(descritiva=descritiva,blocos=blocos,parametros=pars,retornos=nr,retornos_resumo=nr_resumo,
     estacionariedade=ns,horas=horas,mensal=mensal,
     destaques=destaques,plots=list(serie=g1,blocos=g2,mensal=g3))
 }
