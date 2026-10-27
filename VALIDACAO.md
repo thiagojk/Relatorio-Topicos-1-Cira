@@ -146,3 +146,40 @@ Os horizontes existentes são 1, 2, 5 e 10 anos, equivalentes a 12, 24, 60 e 120
 - `docs/relatorio.pdf`: 1428090 bytes; SHA256 `7cce3a5e5a4e815e824649f7091eb08e204d1228f8c9b6a10a6790bae4ef0233`.
 
 - `docs/relatorio.docx`: 1140553 bytes; SHA256 `2dd6193c969d4a1b1b66e9c93dcd5edccf273c7078ddbcc13e69a22a4dbfe01c`.
+
+## Interpretação didática dos níveis de retorno — 27/10/2026
+
+A seção **4.6 — Níveis de retorno** mantém a Tabela 4 e os horizontes de **1, 2, 5 e 10 anos**, sem duplicá-la nem modificar seus números. Foram acrescentados **oito parágrafos interpretativos imediatamente após a tabela**, antes do gráfico, tomando a referência de Carolyne somente como inspiração de apresentação. Não foram copiados textos ou exemplos financeiros.
+
+A interpretação aborda, em sequência: conteúdo e leitura das colunas; probabilidade de excedência mensal e conversão para blocos; exemplo de um ano; exemplo de dez anos; crescimento dos níveis e amplitudes dos IC; significado frequentista de cobertura; contexto do canal XRS-B e confronto com a amostra; limitações da GEV global e da extrapolação.
+
+### Exemplos vinculados aos objetos R
+
+- **1 ano:** 12 blocos, estimativa 2,576e-03 W/m², IC de 4,208e-04 a 9,815e-03 W/m², probabilidade de excedência de aproximadamente 8,33% por mês.
+- **10 anos:** 120 blocos, estimativa 1,698e+00 W/m², IC de 9,712e-03 a 2,651e+01 W/m², probabilidade de excedência de aproximadamente 0,83% por mês.
+- **Contraste curto/longo:** razão dos níveis aproximadamente 659,1; amplitude dos IC de 9,394e-03 a 2,650e+01 W/m². A razão usa os valores completos, antes do arredondamento da tabela.
+- **Calibração:** o nível de um ano é 1,76 vezes o maior fluxo observado, com zero excedências contra cerca de 7,8 esperadas pelo modelo constante; o nível de dez anos é cerca de 1.159,6 vezes o máximo observado.
+
+Os objetos auxiliares `rt_curto` e `rt_longo` selecionam as linhas de menor/maior período de `retornos$tabela`. Todas as estimativas, limites, probabilidades, razões, amplitudes, forma, contagens, quantidade de máximos e parâmetros do bootstrap são interpolados dinamicamente no QMD. Não são resultados escritos manualmente. As funções de formatação são de apresentação e mantêm os quatro algarismos significativos da tabela.
+
+A interpretação de período de retorno é probabilística por bloco: `1/(12T)` nesta aplicação mensal, sem ocorrência obrigatória a cada T anos. A leitura de espera média é condicionada à estabilidade e à independência aproximada, ressalvadas explicitamente. O IC de 95% é explicado por repetição hipotética do procedimento: sob hipóteses adequadas, cerca de 95% dos intervalos conteriam o nível populacional correspondente. Não se atribui 95% de probabilidade ao parâmetro fixo neste intervalo, nem se confunde o IC com a faixa que conteria 95% dos fluxos.
+
+A cobertura é tratada como **nominal** diante da dependência, heterogeneidade e má especificação. A narrativa relaciona a forma elevada à extrapolação, distingue intensidade registrada de identificação/classificação física de flares e integra a falha da cauda superior à discussão numérica. O limite instrumental valid_max permanece explicitamente distinto de uma barreira física solar. Não se autoriza previsão operacional com esses níveis.
+
+### Conferências desta atualização
+
+- Revistos QMD, módulos `05`, `06` e `08`, README, validação e tabela numérica antes da edição. Somente apresentação textual foi modificada; todos os scripts R, CSVs anteriores e PNGs permanecem byte a byte idênticos. `all.equal` confirmou preservação integral do RDS científico.
+- Os quatro níveis têm estimativas dentro de seus respectivos IC, limites ordenados e unidades W/m². As amplitudes aumentam nos quatro horizontes, como afirmado na interpretação.
+- Conferência do HTML identificou exatamente oito parágrafos interpretativos e validou 13 expressões numéricas extraídas das linhas originais e de seus cálculos derivados. Sem imagens quebradas, erros JavaScript, referências internas não resolvidas ou transbordamento da página em 390 px.
+- `bash scripts/renderizar_publicar.sh`: execução final concluída com a base real, renderizando HTML, PDF e DOCX e preparando as cópias em `docs/`. A geração foi repetida após explicitar o significado frequentista de cobertura para manter o mesmo texto nos três formatos.
+- PDF: **26 páginas**; tabela na página 14 e interpretação nas páginas 14–16, junto do gráfico. Os exemplos numéricos e a frase que define a cobertura de 95% foram encontrados no texto extraído. Inspeção visual das páginas da seção; nenhum bloco de texto fora das margens úteis.
+- Word: XML contém os mesmos exemplos e a explicação de cobertura. Prévia LibreOffice com **20 páginas**, com interpretação iniciada na página 11 e continuação nas seguintes; paginação pode variar no Microsoft Word. O sumário automático deve ser atualizado ao abrir.
+- As três cópias do Pages são idênticas aos artefatos da raiz. Downloads PDF e DOCX exercitados novamente em servidor local com prefixo do projeto: HTTP 200 e arquivos baixados iguais aos originais.
+
+### Artefatos desta interpretação
+
+- `docs/index.html`: 2807006 bytes; SHA256 `dec6475d8fbd7b70b4881b1c62da38f3b734d54f8ad86de86375fb68c22fa11d`.
+
+- `docs/relatorio.pdf`: 1432388 bytes; SHA256 `e928d79fc2a03d6c3fee175decd34b6400e24e2351b7f39ad9e6af73cac0c245`.
+
+- `docs/relatorio.docx`: 1141937 bytes; SHA256 `5e47e77d74159d539ed4f6b92801f914c1a93c5c3729edd6e8ca14e71455bd3b`.

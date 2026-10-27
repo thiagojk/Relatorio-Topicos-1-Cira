@@ -56,7 +56,7 @@ O projeto contém dados solares. BrasilAgro/Boa Safra, VaR, mínimos financeiros
 
 ## Tabela principal de níveis de retorno
 
-Na seção **Resultados → Níveis de retorno**, a tabela apresenta os horizontes já existentes de **1, 2, 5 e 10 anos**, estimativa e IC 95% em uma coluna `(inferior; superior)`, em W/m² e notação científica. Os intervalos são percentis do bootstrap circular de blocos móveis original, sem substituir pela Hessiana nem acrescentar horizontes. `R/08_apresentacao.R` apenas formata os valores de `retornos$tabela`; os números completos continuam em `niveis_retorno.csv` e `retornos_relatorio.csv`, e o resumo em `retornos_resumo_relatorio.csv`. A advertência de inadequação da cauda permanece imediatamente após a tabela.
+Na seção **Resultados → Níveis de retorno**, a tabela apresenta os horizontes já existentes de **1, 2, 5 e 10 anos**, estimativa e IC 95% em uma coluna `(inferior; superior)`, em W/m² e notação científica. Os intervalos são percentis do bootstrap circular de blocos móveis original, sem substituir pela Hessiana nem acrescentar horizontes. `R/08_apresentacao.R` apenas formata os valores de `retornos$tabela`; os números completos continuam em `niveis_retorno.csv` e `retornos_relatorio.csv`, e o resumo em `retornos_resumo_relatorio.csv`. A advertência de inadequação da cauda permanece integrada à interpretação da tabela. A interpretação em oito parágrafos ensina a leitura das colunas, a probabilidade mensal de excedência, exemplos dos horizontes mais curto e longo, a comparação de níveis e amplitudes dos IC e sua interpretação frequentista. Os exemplos, limites, probabilidades, razões e contagens são interpolados diretamente dos objetos R; não há números de resultados digitados manualmente.
 
 ## Estado atual
 
