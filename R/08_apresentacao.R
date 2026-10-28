@@ -103,7 +103,24 @@ apresentar_resultados <- function(base, ex, block, modelos, retornos) {
       x='Mês do bloco (UTC)',y='Máximo mensal (W/m²), eixo log10',
       caption='Destaques: três maiores máximos. Rótulos identificam o mês, não a data de um flare.'),
     'mensais_destaque')
+  # Mesma seleção, ordem e escala original usadas em R/05_gev.R.
+  # Sturges define apenas as classes visuais; nenhum extremo é excluído.
+  stopifnot(all(is.finite(mensal$maximo)), all(mensal$maximo > 0))
+  classes_mensais <- grDevices::nclass.Sturges(mensal$maximo)
+  limites_mensais <- seq(min(mensal$maximo), max(mensal$maximo),
+    length.out=classes_mensais+1L)
+  g4 <- fig(ggplot(mensal,aes(maximo))+
+    geom_histogram(breaks=limites_mensais,closed='right',
+      fill=cor,color='white',linewidth=.4)+
+    scale_x_continuous(labels=scales::label_scientific())+
+    scale_y_continuous(breaks=scales::breaks_width(10))+
+    labs(title='Distribuição dos máximos mensais do fluxo XRS-B',
+      subtitle=paste(nrow(mensal),'meses elegíveis; cobertura mínima de',
+        paste0(100*config$cobertura,'%')),
+      x='Fluxo máximo mensal XRS-B (W/m²)',y='Frequência',
+      caption=paste(classes_mensais,'classes de largura igual (Sturges). Escala original; todos os máximos elegíveis.')),
+    'histograma_maximos_mensais')
   list(descritiva=descritiva,blocos=blocos,parametros=pars,retornos=nr,retornos_resumo=nr_resumo,
     estacionariedade=ns,horas=horas,mensal=mensal,
-    destaques=destaques,plots=list(serie=g1,blocos=g2,mensal=g3))
+    destaques=destaques,plots=list(serie=g1,blocos=g2,mensal=g3,histograma_mensal=g4))
 }

@@ -273,6 +273,15 @@ imagens('mensais_destaque')
 
 O maior máximo é `r sci(max(apresentacao$mensal$maximo))` W/m², no bloco iniciado em `r format(apresentacao$mensal[which.max(maximo),inicio],'%m/%Y')`. Os pontos menores também são relevantes: o modelo precisa representar a distribuição de todos os máximos elegíveis, não apenas os maiores. A evolução temporal sugere que reuni-los em uma única distribuição constante pode ser uma aproximação forte.
 
+```{r}
+#| label: fig-histograma-mensal
+#| out-width: "95%"
+#| fig-cap: "Distribuição dos mesmos máximos mensais elegíveis utilizados na GEV principal, com o critério de cobertura já definido. Frequências em classes de largura igual pela regra de Sturges, na escala original do fluxo, sem exclusão dos maiores valores."
+imagens('histograma_maximos_mensais')
+```
+
+Observa-se forte assimetria à direita na distribuição dos máximos mensais. A maior parte dos blocos apresenta máximos relativamente menores, enquanto poucos meses concentram valores substancialmente mais elevados, formando uma cauda superior pronunciada. Esse comportamento reforça o interesse em modelar especificamente os extremos por meio da distribuição GEV. Entretanto, a presença visual de uma cauda direita não implica, por si só, que uma GEV de cauda muito pesada forneça um ajuste adequado; essa questão é avaliada posteriormente pelos diagnósticos do modelo. O histograma e o ajuste GEV utilizam o fluxo na escala original, em W/m².
+
 ## Ajuste da GEV
 
 A GEV estacionária convergiu numericamente, mas apresentou uma **forma muito elevada**. A @tbl-parametros combina as estimativas originais com os intervalos de bootstrap móvel, mais adequados à intenção de preservar dependência local do que interpretar erros padrão como se os meses fossem independentes.

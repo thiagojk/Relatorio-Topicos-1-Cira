@@ -40,7 +40,8 @@ Novos produtos de apresentação, derivados dos resultados atuais, em `R/08_apre
 
 - tabela descritiva enxuta, comparação dos calendários, GEV com IC bootstrap, níveis de retorno;
 - série histórica com envelope mínimo–máximo e mediana por hora, usando todos os minutos válidos e conservando os picos; não é uma série minuto a minuto desenhada sem agregação;
-- comparação temporal dos três calendários e gráfico da amostra mensal com os três maiores destacados.
+- comparação temporal dos três calendários e gráfico da amostra mensal com os três maiores destacados;
+- histograma dos mesmos máximos mensais elegíveis usados na GEV, em escala original, com classes de largura igual pela regra de Sturges, apresentado após a série mensal e antes do ajuste.
 
 As saídas anteriores continuam sendo calculadas e exportadas. `tabelas/*_relatorio.csv`, `serie_horaria_visual.csv` e os novos PNGs são reproduzíveis e permanecem ignorados pelo Git. A conversão dos critérios de estacionariedade para W/m² no relatório é apenas apresentação; preserva as diferenças de AIC.
 

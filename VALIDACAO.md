@@ -183,3 +183,23 @@ A cobertura é tratada como **nominal** diante da dependência, heterogeneidade 
 - `docs/relatorio.pdf`: 1432388 bytes; SHA256 `e928d79fc2a03d6c3fee175decd34b6400e24e2351b7f39ad9e6af73cac0c245`.
 
 - `docs/relatorio.docx`: 1141937 bytes; SHA256 `5e47e77d74159d539ed4f6b92801f914c1a93c5c3729edd6e8ca14e71455bd3b`.
+
+## Histograma dos máximos mensais — 27/10/2026
+
+Foi acrescentada a figura `fig-histograma-mensal`, após a série dos máximos mensais e antes do ajuste GEV, na seção Resultados. A numeração continua automática pelo Quarto. O texto imediatamente posterior descreve a assimetria à direita e ressalva que sua presença visual não demonstra adequação de uma GEV de cauda muito pesada.
+
+O módulo `R/08_apresentacao.R` usa diretamente `mensal`, derivado de `block$blocos$mensal[elegivel == TRUE, .(inicio,fim,maximo,cobertura)]`. A seleção de valores é idêntica à de `R/05_gev.R`: `block$blocos$mensal[elegivel == TRUE,maximo]`. Não há nova base, mudança de cobertura, reamostragem, transformação ou retirada de extremos. O critério permanece cobertura mínima de 90% do mês civil completo.
+
+Conferência com a base real: **94 máximos**, mínimo `4,100943e-08`, mediana `1,897504e-05` e máximo `1,464085e-03` W/m². A regra de Sturges define **oito classes de largura igual**, com limites entre o mínimo e o máximo observados. As frequências são **79, 10, 2, 0, 2, 0, 0 e 1**, somando 94. Os limites incluem os dois extremos. O eixo X permanece na escala original (transformação identidade); o eixo Y é frequência absoluta, não densidade. Não foi acrescentada uma versão logarítmica.
+
+A auditoria executou as próprias expressões do módulo responsáveis pela amostra e pelo gráfico, verificou igualdade dos valores e das datas com a seleção da GEV, tamanho amostral, finitude, contagens das barras pelo `ggplot_build` e inclusão dos extremos (com tolerância de arredondamento de máquina nos limites gráficos). O resumo científico anterior foi preservado integralmente (`all.equal`). A renderização normal recalcula a rotina existente; nenhum ajuste, critério ou resultado GEV foi modificado.
+
+### Renderização e preservação desta figura
+
+- `bash scripts/renderizar_publicar.sh`: concluído com a base real nos três formatos, seguido da preparação de `docs/`. Houve uma interrupção temporária do acesso ao ambiente, mas o processo continuou e terminou com sucesso.
+- HTML: Figura 7, após a série mensal e antes da seção 4.5 (GEV); parágrafo interpretativo imediatamente após a figura. Todas as imagens carregam; sem transbordamento da página em 390 px. Todas as figuras e tabelas anteriores foram preservadas.
+- PDF: 27 páginas, histograma completo na página 12, inspecionado visualmente, sem corte do título, eixos ou legenda. Texto interpretativo continua na página seguinte, antes do ajuste.
+- Word: DOCX gerado, contendo a nova figura e o mesmo parágrafo interpretativo. As cópias HTML/PDF/DOCX em `docs/` são idênticas aos originais da raiz.
+- Hashes dos CSVs e PNGs anteriores permaneceram idênticos. Entre os scripts R, somente o módulo de apresentação `08` mudou. O novo PNG é um produto reproduzível, ignorado pelo Git. Não foi alterado o NetCDF nem incluída a base no versionamento.
+- Verificação específica do gráfico aprovada. A suíte estatística não foi repetida nesta alteração de apresentação; o resumo científico integral e todos os produtos numéricos anteriores foram conferidos contra a execução anterior.
+- Revisão final de largura: a nova figura usa `out-width: "95%"` no Quarto, evitando corte do último rótulo do eixo na saída Word. Os três formatos foram renderizados novamente e revalidados após esse ajuste. PDF final com 27 páginas (figura na página 12); prévia LibreOffice do Word com 21 páginas (figura na página 9), inspecionada com título, eixos e legenda completos. A paginação pode variar no Microsoft Word.
