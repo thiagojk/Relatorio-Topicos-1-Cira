@@ -37,6 +37,8 @@ apresentar_resultados <- function(base, ex, block, modelos, retornos) {
   nr_resumo <- data.table(
     `Período de retorno`=paste(retornos$tabela$anos,
       ifelse(retornos$tabela$anos==1,'ano','anos')),
+    `Prob. de excedência mensal`=paste0(formatC(100/(12*retornos$tabela$anos),
+      format='f',digits=2,decimal.mark=','),'%'),
     `Estimativa (W/m²)`=fmt_fluxo(retornos$tabela$estimativa),
     `IC 95% (W/m²)`=paste0('(',fmt_fluxo(retornos$tabela$inferior),'; ',
       fmt_fluxo(retornos$tabela$superior),')'))
@@ -110,15 +112,20 @@ apresentar_resultados <- function(base, ex, block, modelos, retornos) {
   limites_mensais <- seq(min(mensal$maximo), max(mensal$maximo),
     length.out=classes_mensais+1L)
   g4 <- fig(ggplot(mensal,aes(maximo))+
-    geom_histogram(breaks=limites_mensais,closed='right',
-      fill=cor,color='white',linewidth=.4)+
+    geom_histogram(aes(y=after_stat(density)),
+      breaks=limites_mensais,closed='right',
+      fill=cor,color='white',linewidth=.4,alpha=.65)+
+    # Kernel gaussiano, largura automática nrd0; trim limita só o desenho
+    # ao intervalo observado. A KDE não impõe suporte físico nem família GEV.
+    geom_density(bw='nrd0',kernel='gaussian',trim=TRUE,
+      color='#9b513d',linewidth=1.1)+
     scale_x_continuous(labels=scales::label_scientific())+
-    scale_y_continuous(breaks=scales::breaks_width(10))+
+    scale_y_continuous(labels=scales::label_scientific())+
     labs(title='Distribuição dos máximos mensais do fluxo XRS-B',
       subtitle=paste(nrow(mensal),'meses elegíveis; cobertura mínima de',
         paste0(100*config$cobertura,'%')),
-      x='Fluxo máximo mensal XRS-B (W/m²)',y='Frequência',
-      caption=paste(classes_mensais,'classes de largura igual (Sturges). Escala original; todos os máximos elegíveis.')),
+      x='Fluxo máximo mensal XRS-B (W/m²)',y='Densidade',
+      caption=paste0(classes_mensais,' classes (Sturges); curva: KDE gaussiana, largura automática (nrd0).\nEscala original; todos os máximos elegíveis.')),
     'histograma_maximos_mensais')
   list(descritiva=descritiva,blocos=blocos,parametros=pars,retornos=nr,retornos_resumo=nr_resumo,
     estacionariedade=ns,horas=horas,mensal=mensal,

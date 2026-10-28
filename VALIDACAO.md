@@ -203,3 +203,23 @@ A auditoria executou as próprias expressões do módulo responsáveis pela amos
 - Hashes dos CSVs e PNGs anteriores permaneceram idênticos. Entre os scripts R, somente o módulo de apresentação `08` mudou. O novo PNG é um produto reproduzível, ignorado pelo Git. Não foi alterado o NetCDF nem incluída a base no versionamento.
 - Verificação específica do gráfico aprovada. A suíte estatística não foi repetida nesta alteração de apresentação; o resumo científico integral e todos os produtos numéricos anteriores foram conferidos contra a execução anterior.
 - Revisão final de largura: a nova figura usa `out-width: "95%"` no Quarto, evitando corte do último rótulo do eixo na saída Word. Os três formatos foram renderizados novamente e revalidados após esse ajuste. PDF final com 27 páginas (figura na página 12); prévia LibreOffice do Word com 21 páginas (figura na página 9), inspecionada com título, eixos e legenda completos. A paginação pode variar no Microsoft Word.
+
+## Densidade mensal, remoção do PP gráfico e probabilidades — 27/10/2026
+
+A Figura 7 mantém os mesmos 94 máximos mensais elegíveis da GEV, em escala original, incluindo todos os extremos. O eixo Y passou a densidade: `after_stat(density)` no histograma, com as oito classes anteriores de Sturges. Sobrepôs-se uma KDE gaussiana por `geom_density`, com largura automática `nrd0` e cor contrastante. `trim=TRUE` restringe somente o desenho da curva ao intervalo observado, sem retirar observações de sua estimação. O kernel pode ter viés de fronteira; o texto identifica a KDE como não paramétrica e não a utiliza para justificar Fréchet, suporte físico ou adequação da cauda GEV.
+
+A antiga Figura 9 era o **PP-plot da GEV mensal**, `fig-pp-gev-principal`. Seu bloco e parágrafo específico foram retirados do QMD; em `R/05_gev.R`, somente a geração desse gráfico mensal deixou de ser executada. Os PP gráficos diário/semanal, QQs, métricas RMSE PP, PIT e demais cálculos/diagnósticos permanecem. O PNG mensal obsoleto, ignorado pelo Git, foi removido. O Quarto renumera automaticamente as figuras posteriores.
+
+A Tabela 4 conserva suas colunas anteriores, com valores inalterados, e acrescenta **Prob. de excedência mensal**, calculada em `R/08_apresentacao.R` por `100/(12*retornos$tabela$anos)` e formatada com duas casas: **8,33%, 4,17%, 1,67% e 0,83%**. Os CSVs numéricos originais permanecem; só o CSV de resumo ganha a coluna formatada. O texto vincula a nova coluna à fórmula e aos exemplos dinâmicos de um e dez anos, sem prometer ocorrência anual obrigatória.
+
+A auditoria específica verificou igualdade dos valores e datas da amostra com a seleção da GEV, 94 contribuições às barras, área do histograma igual a um, eixo X identidade, KDE finita/não negativa e largura/kernel especificados. Conferiu também as quatro probabilidades calculadas programaticamente e preservação integral do resumo científico anterior (`all.equal`). Não houve mudança de qualidade, cobertura, estimação GEV, parâmetros, níveis ou bootstrap.
+
+### Verificações e renderização desta atualização
+
+- `bash scripts/renderizar_publicar.sh`: concluído sem erros, com a base real, gerando HTML, PDF e DOCX e atualizando `docs/`.
+- HTML: histograma + KDE visíveis na Figura 7; Tabela 4 com quatro colunas e probabilidades corretas. Todas as imagens carregam, sem transbordamento da página em 390 px. Inspeção visual do gráfico e da tabela.
+- A única figura retirada foi `fig-pp-gev-principal`. Permanecem todas as demais figuras e tabelas; as figuras agora vão de 1 a 11. O gráfico de níveis de retorno passou de Figura 10 a Figura 9. Não há destinos de referências internas ausentes. A Tabela 4 mantém a mesma numeração e seus valores anteriores foram comparados célula a célula.
+- PDF: 27 páginas; Figura 7 na página 12 e Tabela 4 na página 14, inspecionadas, com eixos, curva, colunas e valores completos.
+- Word: arquivo gerado e conferido no XML; prévia LibreOffice com 20 páginas, Figura 7 na página 9 e Tabela 4 na página 11, inspecionadas sem corte do novo conteúdo. A paginação no Microsoft Word pode variar.
+- O resumo científico completo permanece idêntico ao anterior. Hashes confirmaram preservação de todos os CSVs e PNGs anteriores, exceto os dois produtos de apresentação solicitados (histograma e tabela resumida) e o PP mensal removido. O módulo `05` mudou somente na geração gráfica do PP mensal; `08` somente na apresentação da KDE/probabilidade.
+- Auditoria específica dos novos elementos aprovada; a suíte estatística não foi repetida para esta alteração de apresentação. Não houve alteração dos testes existentes. As três cópias do Pages são idênticas aos artefatos da raiz, e o NetCDF permanece fora do Git.

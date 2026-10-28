@@ -1,14 +1,14 @@
 {
   "index.html": {
-    "bytes": 2876769,
-    "sha256": "6decf9272a55dbb51f9131b656a55df6ee28ce77e2bb66f38dbd79c2217abd50"
+    "bytes": 2808694,
+    "sha256": "57d4aba35440a58a241b59d63a2a4cd6e6bd2c0f438ee0d9d9f2dabf500316dc"
   },
   "relatorio.pdf": {
-    "bytes": 1479170,
-    "sha256": "a528ed822ed65154c78eb3b2182d290bd15b76d2c9502bd586a317fe5b45adac"
+    "bytes": 1429161,
+    "sha256": "c29023a2a6161e2192e70ddd09a676183d51a892456d7f9f72de4e41842825d1"
   },
   "relatorio.docx": {
-    "bytes": 1187005,
-    "sha256": "a4cd2ddd2e2d8d03493bb701effb324248c4002be3d46a8c3388eeece1c8ce10"
+    "bytes": 1141125,
+    "sha256": "2a39059a48dc9b6b6fd5f0184b641f8a555a291b8d9d86955ee5d021c7885df7"
   }
 }

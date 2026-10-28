@@ -41,7 +41,7 @@ Novos produtos de apresentação, derivados dos resultados atuais, em `R/08_apre
 - tabela descritiva enxuta, comparação dos calendários, GEV com IC bootstrap, níveis de retorno;
 - série histórica com envelope mínimo–máximo e mediana por hora, usando todos os minutos válidos e conservando os picos; não é uma série minuto a minuto desenhada sem agregação;
 - comparação temporal dos três calendários e gráfico da amostra mensal com os três maiores destacados;
-- histograma dos mesmos máximos mensais elegíveis usados na GEV, em escala original, com classes de largura igual pela regra de Sturges, apresentado após a série mensal e antes do ajuste.
+- histograma em densidade dos mesmos máximos mensais elegíveis usados na GEV, com KDE gaussiana de largura automática (nrd0), em escala original e classes de largura igual pela regra de Sturges, apresentado após a série mensal e antes do ajuste.
 
 As saídas anteriores continuam sendo calculadas e exportadas. `tabelas/*_relatorio.csv`, `serie_horaria_visual.csv` e os novos PNGs são reproduzíveis e permanecem ignorados pelo Git. A conversão dos critérios de estacionariedade para W/m² no relatório é apenas apresentação; preserva as diferenças de AIC.
 
@@ -57,7 +57,7 @@ O projeto contém dados solares. BrasilAgro/Boa Safra, VaR, mínimos financeiros
 
 ## Tabela principal de níveis de retorno
 
-Na seção **Resultados → Níveis de retorno**, a tabela apresenta os horizontes já existentes de **1, 2, 5 e 10 anos**, estimativa e IC 95% em uma coluna `(inferior; superior)`, em W/m² e notação científica. Os intervalos são percentis do bootstrap circular de blocos móveis original, sem substituir pela Hessiana nem acrescentar horizontes. `R/08_apresentacao.R` apenas formata os valores de `retornos$tabela`; os números completos continuam em `niveis_retorno.csv` e `retornos_relatorio.csv`, e o resumo em `retornos_resumo_relatorio.csv`. A advertência de inadequação da cauda permanece integrada à interpretação da tabela. A interpretação em oito parágrafos ensina a leitura das colunas, a probabilidade mensal de excedência, exemplos dos horizontes mais curto e longo, a comparação de níveis e amplitudes dos IC e sua interpretação frequentista. Os exemplos, limites, probabilidades, razões e contagens são interpolados diretamente dos objetos R; não há números de resultados digitados manualmente.
+Na seção **Resultados → Níveis de retorno**, a tabela apresenta os horizontes já existentes de **1, 2, 5 e 10 anos**, probabilidade mensal de excedência calculada por `1/(12T)`, estimativa e IC 95% em uma coluna `(inferior; superior)`, em W/m² e notação científica. Os intervalos são percentis do bootstrap circular de blocos móveis original, sem substituir pela Hessiana nem acrescentar horizontes. `R/08_apresentacao.R` apenas formata os valores de `retornos$tabela`; os números completos continuam em `niveis_retorno.csv` e `retornos_relatorio.csv`, e o resumo em `retornos_resumo_relatorio.csv`. A advertência de inadequação da cauda permanece integrada à interpretação da tabela. A interpretação em oito parágrafos ensina a leitura das colunas, a probabilidade mensal de excedência, exemplos dos horizontes mais curto e longo, a comparação de níveis e amplitudes dos IC e sua interpretação frequentista. Os exemplos, limites, probabilidades, razões e contagens são interpolados diretamente dos objetos R; não há números de resultados digitados manualmente.
 
 ## Estado atual
 
@@ -175,3 +175,5 @@ Rscript testes/testar.R
 ```
 
 Os dados artificiais existem somente para testar contratos, conversões, rejeições e a execução dos módulos; nunca são gravados em `Dados/` real nem apresentados como observações solares. Para o teste de renderização em área temporária, consulte o procedimento em `VALIDACAO.md`.
+
+A figura PP mensal foi retirada do relatório; QQ, métricas PP/PIT, dependência e demais diagnósticos permanecem. A numeração das figuras é automática.

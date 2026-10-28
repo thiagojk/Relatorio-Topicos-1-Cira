@@ -276,11 +276,11 @@ O maior máximo é `r sci(max(apresentacao$mensal$maximo))` W/m², no bloco inic
 ```{r}
 #| label: fig-histograma-mensal
 #| out-width: "95%"
-#| fig-cap: "Distribuição dos mesmos máximos mensais elegíveis utilizados na GEV principal, com o critério de cobertura já definido. Frequências em classes de largura igual pela regra de Sturges, na escala original do fluxo, sem exclusão dos maiores valores."
+#| fig-cap: "Distribuição dos mesmos máximos mensais elegíveis utilizados na GEV principal, com o critério de cobertura já definido. Histograma em densidade com classes de largura igual (Sturges) e KDE gaussiana com largura automática (nrd0), na escala original, sem exclusão dos maiores valores."
 imagens('histograma_maximos_mensais')
 ```
 
-Observa-se forte assimetria à direita na distribuição dos máximos mensais. A maior parte dos blocos apresenta máximos relativamente menores, enquanto poucos meses concentram valores substancialmente mais elevados, formando uma cauda superior pronunciada. Esse comportamento reforça o interesse em modelar especificamente os extremos por meio da distribuição GEV. Entretanto, a presença visual de uma cauda direita não implica, por si só, que uma GEV de cauda muito pesada forneça um ajuste adequado; essa questão é avaliada posteriormente pelos diagnósticos do modelo. O histograma e o ajuste GEV utilizam o fluxo na escala original, em W/m².
+Na @fig-histograma-mensal, o histograma e a curva de densidade kernel estimada evidenciam forte assimetria à direita nos máximos mensais. A maior parte dos blocos apresenta máximos relativamente menores, enquanto poucos meses concentram valores substancialmente mais elevados, formando uma cauda superior pronunciada. Esse comportamento reforça o interesse em modelar especificamente os extremos por meio da distribuição GEV. Entretanto, a presença visual de uma cauda direita não implica, por si só, que uma GEV de cauda muito pesada forneça um ajuste adequado; essa questão é avaliada posteriormente pelos diagnósticos do modelo. O histograma, a densidade e o ajuste GEV utilizam o fluxo na escala original, em W/m². A curva é uma estimativa não paramétrica, não uma evidência de domínio Fréchet. O kernel gaussiano pode apresentar viés junto ao limite inferior positivo; a curva é desenhada apenas no intervalo observado e não define limites físicos do fluxo.
 
 ## Ajuste da GEV
 
@@ -302,14 +302,6 @@ imagens('qq_gev_mensal')
 
 A região superior afasta-se fortemente da reta. Na posição empírica do maior ponto, o quantil teórico é `r sci(evd::qgev(max(ppoints(nrow(apresentacao$mensal))),loc=f$fit$estimate['loc'],scale=f$fit$estimate['scale'],shape=f$fit$estimate['shape'])*f$escala)` W/m², contra `r sci(max(apresentacao$mensal$maximo))` W/m² observado. A GEV extrapola muito acima dos maiores fluxos desta amostra. O QQ cumpre a função diagnóstica que motiva a Figura 8 de Brito (s.d.), mas confronta diretamente a distribuição GEV ajustada, em vez de copiar a comparação com Gumbel ou classificar a cauda apenas pela curvatura.
 
-```{r}
-#| label: fig-pp-gev-principal
-#| fig-cap: "PP da GEV mensal: probabilidades empíricas versus probabilidades do modelo. Proximidade da diagonal indica concordância global, sem validar isoladamente a cauda."
-imagens('pp_gev_mensal')
-```
-
-O PP resume discrepâncias no conjunto da distribuição; seu RMSE é `r signif(modelos$comparacao[bloco==principal,rmse_pp],3)`. Mesmo um alinhamento razoável de parte dos pontos não compensa o desvio superior do QQ. Portanto, **convergência numérica não equivale a adequação estatística**.
-
 ## Níveis de retorno {#sec-retornos}
 
 Os níveis formais aumentam rapidamente com o período de retorno. São resultados da GEV ajustada e ajudam a avaliar suas consequências; os diagnósticos anteriores impedem tratá-los como previsões confiáveis.
@@ -320,9 +312,9 @@ mostrar(apresentacao$retornos_resumo,
  'Níveis de retorno do fluxo solar XRS-B estimados pela GEV, com intervalos de confiança de 95%.')
 ```
 
-A @tbl-retornos apresenta as estimativas pontuais dos níveis de retorno do fluxo solar XRS-B e seus intervalos de confiança de 95%, para os horizontes de `r paste(retornos$tabela$anos,collapse=', ')` anos. Os valores são quantis da GEV ajustada aos **`r nrow(apresentacao$mensal)` máximos mensais elegíveis**, não à totalidade dos minutos individuais. A coluna central informa o nível estimado, e a última reúne os limites inferior e superior, nessa ordem, ambos em W/m². Os intervalos principais vêm do bootstrap circular de blocos móveis, mantendo a grade mensal e suas lacunas.
+A @tbl-retornos apresenta as estimativas pontuais dos níveis de retorno do fluxo solar XRS-B e seus intervalos de confiança de 95%, para os horizontes de `r paste(retornos$tabela$anos,collapse=', ')` anos. Os valores são quantis da GEV ajustada aos **`r nrow(apresentacao$mensal)` máximos mensais elegíveis**, não à totalidade dos minutos individuais. A coluna “Prob. de excedência mensal” informa a probabilidade de ultrapassagem em um mês segundo o modelo; a coluna seguinte apresenta o nível estimado, e a última reúne os limites inferior e superior, nessa ordem, ambos em W/m². Os intervalos principais vêm do bootstrap circular de blocos móveis, mantendo a grade mensal e suas lacunas.
 
-Nesta aplicação, cada ano corresponde a `r rt_curto$blocos/rt_curto$anos` blocos mensais. Assim, os horizontes da tabela equivalem a `r paste(retornos$tabela$blocos,collapse=', ')` blocos, respectivamente. O período de retorno expressa uma **probabilidade de excedência por mês**: para um horizonte de $T$ anos, ela é $1/(12T)$. Apenas sob estabilidade da distribuição e independência aproximada a espera média teria a interpretação de $12T$ meses. Isso não estabelece uma data para a ocorrência: meses com excedências podem se agrupar, e um intervalo de duração $T$ também pode transcorrer sem nenhuma. A dependência e a heterogeneidade observadas nesta base limitam essa leitura como tempo de espera.
+Nesta aplicação, cada ano corresponde a `r rt_curto$blocos/rt_curto$anos` blocos mensais. Assim, os horizontes da tabela equivalem a `r paste(retornos$tabela$blocos,collapse=', ')` blocos, respectivamente. O período de retorno expressa uma **probabilidade de excedência por mês**: para um horizonte de $T$ anos, ela é $p_T=1/(12T)$, calculada na nova coluna da @tbl-retornos. Para `r texto_periodo(rt_curto$anos)`, temos $1/`r rt_curto$blocos` = `r texto_num(1/rt_curto$blocos,4)`$, ou aproximadamente `r texto_num(100/rt_curto$blocos,2)`%; para `r texto_periodo(rt_longo$anos)`, $1/`r rt_longo$blocos` = `r texto_num(1/rt_longo$blocos,5)`$, aproximadamente `r texto_num(100/rt_longo$blocos,2)`%. Um período de retorno de um ano **não significa que o evento necessariamente ocorrerá uma vez por ano**. Apenas sob estabilidade da distribuição e independência aproximada a espera média teria a interpretação de $12T$ meses. Isso não estabelece uma data para a ocorrência: meses com excedências podem se agrupar, e um intervalo de duração $T$ também pode transcorrer sem nenhuma. A dependência e a heterogeneidade observadas nesta base limitam essa leitura como tempo de espera.
 
 Para o horizonte mais curto, de **`r texto_periodo(rt_curto$anos)`**, o modelo fornece **`r texto_fluxo(rt_curto$estimativa)` W/m²**, com IC 95% de `r texto_fluxo(rt_curto$inferior)` a `r texto_fluxo(rt_curto$superior)` W/m². Esse nível corresponde, segundo a GEV estimada, a uma probabilidade mensal de ultrapassagem de aproximadamente **`r texto_num(100*rt_curto$prob_excedencia_por_bloco,2)`%**. Trata-se de identificar qual intensidade ocupa essa posição extrema da distribuição ajustada; não de afirmar que tal intensidade será atingida ao completar um ano. O intervalo acompanha a incerteza da estimação desse quantil, não a duração até um próximo episódio.
 

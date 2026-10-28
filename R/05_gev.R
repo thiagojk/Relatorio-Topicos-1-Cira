@@ -137,13 +137,16 @@ modelar <- function(block,dep) {
     a<-modelos[[t]];if(!a$ok)next
     x<-sort(block$blocos[[t]][elegivel == TRUE,maximo]);p<-ppoints(length(x));e<-a$fit$estimate
     teor<-evd::qgev(p,loc=e['loc'],scale=e['scale'],shape=e['shape'])*a$escala
-    pp<-evd::pgev(x/a$escala,loc=e['loc'],scale=e['scale'],shape=e['shape'])
     qq<-ggplot(data.table(teor,x),aes(teor,x))+geom_point(color=cor,alpha=.5)+
       geom_abline(slope=1,intercept=0)+labs(title=paste('QQ GEV:',t),x='Quantil GEV (W m⁻²)',y='Quantil observado (W m⁻²)')
     if(all(teor>0)&all(x>0)&max(teor)/min(teor)>100)qq<-qq+scale_x_log10()+scale_y_log10()+labs(subtitle='Ambos os eixos em escala log10; a diagonal representa igualdade.')
     plots[[paste0('qq_',t)]]<-fig(qq,paste0('qq_gev_',t))
+    # O PP mensal foi retirado da apresentação; os cálculos RMSE/PIT permanecem.
+    if(t!='mensal') {
+      pp<-evd::pgev(x/a$escala,loc=e['loc'],scale=e['scale'],shape=e['shape'])
     plots[[paste0('pp_',t)]]<-fig(ggplot(data.table(p,pp),aes(p,pp))+geom_point(color=cor,alpha=.5)+
       geom_abline(slope=1,intercept=0)+labs(title=paste('PP GEV:',t),x='Probabilidade empírica',y='Probabilidade GEV'),paste0('pp_gev_',t))
+    }
     xx<-seq(min(x),max(x),length.out=600)
     dens<-data.table(x=xx,dens=evd::dgev(xx/a$escala,loc=e['loc'],scale=e['scale'],shape=e['shape'])/a$escala)
     plots[[paste0('dens_',t)]]<-fig(ggplot(data.table(x),aes(x))+geom_histogram(aes(y=after_stat(density)),bins=25,fill='grey80')+
